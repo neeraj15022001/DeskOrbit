@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DeskOrbit — The Universal Hardware & Peripheral Hub for macOS</title>
+  <meta name="description" content="A native macOS utility to control external displays, audio routing, Bluetooth devices, and external storage from your menu bar and a smart-home style dashboard.">
+  <link rel="icon" type="image/png" href="assets/AppIcon_1024.png">
+
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="DeskOrbit — Universal Hardware Hub for macOS">
+  <meta property="og:description" content="Control external displays, audio, Bluetooth, and storage drives from a single menu bar popover and dashboard.">
+  <meta property="og:image" content="assets/banner.svg">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root {
+      --bg-main: #070a12;
+      --bg-card: #0e1526;
+      --bg-card-hover: #141d34;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(56, 189, 248, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #0284c7;
+      --accent-purple: #818cf8;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Background Glows */
+    .glow-sphere-1 {
+      position: absolute;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 750px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.22) 0%, rgba(99, 102, 241, 0.12) 50%, rgba(7, 10, 18, 0) 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .glow-sphere-2 {
+      position: absolute;
+      top: 900px;
+      right: -100px;
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(7, 10, 18, 0) 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Container */
+    .container {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: rgba(7, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.2s ease;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo img {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text-primary);
+    }
+
+    .nav-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    /* Buttons */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 18px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 24px rgba(2, 132, 199, 0.5);
+      filter: brightness(1.05);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-primary);
+      border-color: var(--border-color);
+      backdrop-filter: blur(8px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.18);
+      transform: translateY(-1px);
+    }
+
+    /* Hero Section */
+    .hero {
+      padding: 90px 0 60px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: var(--accent-cyan);
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 24px;
+    }
+
+    .pulse-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--accent-cyan);
+      box-shadow: 0 0 10px var(--accent-cyan);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.8; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.8; }
+    }
+
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.035em;
+      margin-bottom: 20px;
+      background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.25rem;
+      color: var(--text-secondary);
+      max-width: 720px;
+      margin: 0 auto 36px;
+      font-weight: 400;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    /* Interactive Demo Showcase */
+    .showcase-wrapper {
+      margin: 60px auto 40px;
+      max-width: 980px;
+      position: relative;
+    }
+
+    .mac-window {
+      background: #0d1322;
+      border-radius: 18px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8), 0 0 40px -10px rgba(56, 189, 248, 0.15);
+      overflow: hidden;
+    }
+
+    .window-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: rgba(14, 21, 38, 0.7);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .window-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .control-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+    }
+
+    .dot-close { background: #ff5f56; }
+    .dot-min { background: #ffbd2e; }
+    .dot-max { background: #27c93f; }
+
+    .window-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .window-body {
+      display: grid;
+      grid-template-columns: 340px 1fr;
+      min-height: 440px;
+    }
+
+    /* Left: Simulated Menu Bar Popover */
+    .popover-demo {
+      background: rgba(15, 23, 42, 0.75);
+      border-right: 1px solid var(--border-color);
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .popover-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .control-box {
+      background: rgba(30, 41, 59, 0.5);
+      border-radius: 10px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .control-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+
+    .slider-range {
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: #334155;
+      outline: none;
+      -webkit-appearance: none;
+      cursor: pointer;
+    }
+
+    .slider-range::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+
+    .device-pill {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 8px;
+      background: rgba(30, 41, 59, 0.4);
+      font-size: 0.8rem;
+    }
+
+    /* Right: Monitor Preview Canvas */
+    .monitor-canvas {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      background: radial-gradient(circle at center, #111b33 0%, #090d16 100%);
+      position: relative;
+    }
+
+    .virtual-monitor {
+      width: 100%;
+      max-width: 440px;
+      height: 240px;
+      background: #1e293b;
+      border-radius: 12px;
+      border: 6px solid #334155;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      transition: filter 0.1s linear;
+    }
+
+    .monitor-screen-content {
+      text-align: center;
+      color: #ffffff;
+      padding: 20px;
+    }
+
+    .monitor-stand {
+      width: 40px;
+      height: 35px;
+      background: #334155;
+      margin: 0 auto;
+    }
+
+    .monitor-base {
+      width: 120px;
+      height: 8px;
+      background: #475569;
+      border-radius: 4px;
+      margin: 0 auto;
+    }
+
+    /* Feature Grid */
+    .features-section {
+      padding: 80px 0;
+    }
+
+    .section-header {
+      text-align: center;
+      max-width: 640px;
+      margin: 0 auto 50px;
+    }
+
+    .section-header h2 {
+      font-size: 2.3rem;
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      margin-bottom: 12px;
+    }
+
+    .section-header p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 28px;
+      transition: all 0.25s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .feature-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: rgba(56, 189, 248, 0.12);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      margin-bottom: 18px;
+    }
+
+    .feature-card h3 {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: var(--text-primary);
+    }
+
+    .feature-card p {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .feature-tag {
+      display: inline-block;
+      margin-top: 14px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent-cyan);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* Architecture Grid */
+    .architecture-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 36px;
+      margin: 40px 0;
+    }
+
+    .arch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-top: 24px;
+    }
+
+    .arch-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .arch-item h4 {
+      font-size: 0.95rem;
+      color: var(--accent-cyan);
+      margin-bottom: 6px;
+    }
+
+    .arch-item p {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+    }
+
+    /* Download Banner */
+    .download-card {
+      background: linear-gradient(180deg, rgba(14, 21, 38, 0.9) 0%, rgba(7, 10, 18, 0.95) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      box-shadow: 0 0 60px -15px rgba(2, 132, 199, 0.25);
+      border-radius: 20px;
+      padding: 50px 30px;
+      text-align: center;
+      margin: 60px 0;
+    }
+
+    .download-card h2 {
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    .download-card p {
+      color: var(--text-secondary);
+      font-size: 1.05rem;
+      max-width: 580px;
+      margin: 0 auto 28px;
+    }
+
+    /* Terminal Box */
+    .cli-box {
+      background: #090d16;
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 14px 20px;
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9rem;
+      color: #38bdf8;
+      margin-top: 20px;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 40px 0;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 2.4rem; }
+      .window-body { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-sphere-1"></div>
+  <div class="glow-sphere-2"></div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="container nav-inner">
+      <a href="#" class="logo">
+        <img src="assets/AppIcon_1024.png" alt="DeskOrbit Icon">
+        <span>DeskOrbit</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#features">Features</a></li>
+        <li><a href="#interactive-demo">Live Demo</a></li>
+        <li><a href="#architecture">Architecture</a></li>
+        <li><a href="#download">Download</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <div class="nav-cta">
+        <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+          <span>Get .DMG</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <header class="container hero">
+    <div class="badge-pill">
+      <span class="pulse-dot"></span>
+      <span>macOS 14+ • Apple Silicon & Intel • MIT Licensed</span>
+    </div>
+    <h1>One Orbit for All Your Mac's<br>Connected Hardware.</h1>
+    <p>
+      Control external displays (via Apple Silicon DDC/CI and GPU Gamma), audio routing, Bluetooth devices, and storage drives from a single menu bar popover and smart-home dashboard.
+    </p>
+    <div class="hero-actions">
+      <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.05rem;" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.38c.62-.75 1.04-1.8 0.93-2.85-.9.04-2 .6-2.64 1.35-.57.65-1.06 1.72-.93 2.75 1.01.08 2.02-.5 2.64-1.25z"/></svg>
+        <span>Download for macOS (.DMG)</span>
+      </a>
+      <a href="https://github.com/neeraj15022001/DeskOrbit" class="btn btn-secondary" style="padding: 14px 24px; font-size: 1.05rem;" target="_blank" rel="noopener">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/></svg>
+        <span>View on GitHub</span>
+      </a>
+    </div>
+
+    <!-- Interactive Simulator Showcase -->
+    <div class="showcase-wrapper" id="interactive-demo">
+      <div class="mac-window">
+        <div class="window-header">
+          <div class="window-controls">
+            <div class="control-dot dot-close"></div>
+            <div class="control-dot dot-min"></div>
+            <div class="control-dot dot-max"></div>
+          </div>
+          <div class="window-title">
+            <img src="assets/AppIcon_1024.png" width="16" height="16" style="border-radius: 4px;">
+            <span>DeskOrbit — Interactive Simulator</span>
+          </div>
+          <div style="width: 50px;"></div>
+        </div>
+        <div class="window-body">
+          <!-- Popover column -->
+          <div class="popover-demo">
+            <div class="popover-title">
+              <span>🎛️ DeskOrbit Popover</span>
+              <span style="font-size: 0.75rem; color: var(--accent-cyan);">Menu Bar Mode</span>
+            </div>
+
+            <!-- Display Slider Control -->
+            <div class="control-box">
+              <div class="control-label">
+                <span>🖥️ External Display Brightness</span>
+                <span id="demo-brightness-label">85%</span>
+              </div>
+              <input type="range" min="10" max="100" value="85" class="slider-range" id="demo-brightness-slider">
+            </div>
+
+            <!-- Audio Slider Control -->
+            <div class="control-box">
+              <div class="control-label">
+                <span>🔊 Audio Output Volume</span>
+                <span id="demo-volume-label">60%</span>
+              </div>
+              <input type="range" min="0" max="100" value="60" class="slider-range" id="demo-volume-slider">
+            </div>
+
+            <!-- Bluetooth Badge -->
+            <div class="device-pill">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span>🎧</span>
+                <span>AirPods Pro</span>
+              </span>
+              <span style="color: #34d399; font-weight: 600;">88% 🔋</span>
+            </div>
+
+            <!-- Storage Badge -->
+            <div class="device-pill">
+              <span style="display: flex; align-items: center; gap: 6px;">
+                <span>💾</span>
+                <span>Samsung T7 SSD</span>
+              </span>
+              <button style="background: rgba(255,255,255,0.1); border: none; color: #fff; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.72rem;">Eject ⏏</button>
+            </div>
+          </div>
+
+          <!-- Monitor canvas -->
+          <div class="monitor-canvas">
+            <div class="virtual-monitor" id="virtual-screen">
+              <div class="monitor-screen-content">
+                <h3 style="font-size: 1.1rem; margin-bottom: 4px;">External Monitor Output</h3>
+                <p style="font-size: 0.8rem; color: #94a3b8;">Adjust the brightness slider on the left to see DDC/CI & GPU Gamma scaling in action.</p>
+                <div style="margin-top: 14px; font-family: monospace; font-size: 0.85rem; color: var(--accent-cyan);">
+                  Luminance: <span id="monitor-stat">85%</span>
+                </div>
+              </div>
+            </div>
+            <div class="monitor-stand"></div>
+            <div class="monitor-base"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Features Grid -->
+  <section class="container features-section" id="features">
+    <div class="section-header">
+      <h2>Engineered for Modern Desk Setups</h2>
+      <p>Seamlessly bridging low-level macOS subsystems with Apple Human Interface Guidelines.</p>
+    </div>
+
+    <div class="grid-3">
+      <!-- Feature 1 -->
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <h3>Triple-Layer Display Dimming</h3>
+        <p>
+          Hardware DDC/CI control via Apple Silicon <code>IOAVService</code> for external monitors, GPU Gamma lookup table scaling via CoreGraphics, and seamless software shading.
+        </p>
+        <span class="feature-tag">Hardware + Software</span>
+      </div>
+
+      <!-- Feature 2 -->
+      <div class="feature-card">
+        <div class="feature-icon">🔊</div>
+        <h3>CoreAudio Master Routing</h3>
+        <p>
+          Hardware property listeners catch audio devices instantly. Adjust volume, toggle mute, and switch your system's default sound output in one click.
+        </p>
+        <span class="feature-tag">Zero Latency HAL</span>
+      </div>
+
+      <!-- Feature 3 -->
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Bluetooth & Battery Monitor</h3>
+        <p>
+          Monitors connected peripherals using <code>IOBluetooth</code>. Reads battery percentages directly from IOKit power source registries for mice, keyboards, and headphones.
+        </p>
+        <span class="feature-tag">IOBluetooth & IOKit</span>
+      </div>
+
+      <!-- Feature 4 -->
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>External Drive Safe Eject</h3>
+        <p>
+          Inspect connected external SSDs, USB drives, and SD cards with storage utilization meters. Safely unmount and eject drives via <code>DiskArbitration</code>.
+        </p>
+        <span class="feature-tag">DiskArbitration</span>
+      </div>
+
+      <!-- Feature 5 -->
+      <div class="feature-card">
+        <div class="feature-icon">🎛️</div>
+        <h3>Accessory & Agent Lifecycle</h3>
+        <p>
+          Configured as <code>LSUIElement = true</code> to avoid cluttering your Dock. Dynamically transitions to regular mode when you open the full Home-style dashboard.
+        </p>
+        <span class="feature-tag">Dynamic Policy</span>
+      </div>
+
+      <!-- Feature 6 -->
+      <div class="feature-card">
+        <div class="feature-icon">🛡️</div>
+        <h3>Zero Telemetry, 100% Private</h3>
+        <p>
+          No analytics, no network requests, and zero data collection. Entirely open source under the MIT License and built with clean native Swift 6.
+        </p>
+        <span class="feature-tag">MIT Open Source</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Breakdown -->
+  <section class="container" id="architecture">
+    <div class="architecture-box">
+      <h2 style="font-size: 1.8rem; font-weight: 700; margin-bottom: 8px;">Subsystem Architecture</h2>
+      <p style="color: var(--text-secondary);">Direct C and Objective-C framework integration without bloated third-party dependencies.</p>
+      
+      <div class="arch-grid">
+        <div class="arch-item">
+          <h4>IOAVService & DDC/CI</h4>
+          <p>Sends VCP opcode <code>0x10</code> packets directly to external monitor microcontrollers over Apple Silicon I²C bus <code>0x37</code>.</p>
+        </div>
+        <div class="arch-item">
+          <h4>CoreGraphics Gamma LUT</h4>
+          <p>Directly manipulates GPU transfer curves using <code>CGSetDisplayTransferByTable</code> for displays without DDC.</p>
+        </div>
+        <div class="arch-item">
+          <h4>CoreAudio & AudioToolbox</h4>
+          <p>Hooks system-wide volume scalar properties and registers listeners on <code>kAudioObjectSystemObject</code>.</p>
+        </div>
+        <div class="arch-item">
+          <h4>SwiftUI & AppKit</h4>
+          <p>Responsive, reactive interface pairing <code>NSStatusItem</code> popovers with floating card grid windows.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Download & Installation -->
+  <section class="container" id="download">
+    <div class="download-card">
+      <h2>Ready to take control of your desk?</h2>
+      <p>Download the latest release DMG or build from source using Swift Package Manager.</p>
+      
+      <div class="hero-actions">
+        <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" style="padding: 14px 28px;" target="_blank" rel="noopener">
+          <span>Download DeskOrbit.dmg</span>
+        </a>
+        <a href="https://github.com/neeraj15022001/DeskOrbit" class="btn btn-secondary" style="padding: 14px 24px;" target="_blank" rel="noopener">
+          <span>Explore Source Code</span>
+        </a>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <div class="cli-box">
+          <span style="color: #94a3b8;">$</span>
+          <span>git clone https://github.com/neeraj15022001/DeskOrbit.git &amp;&amp; cd DeskOrbit &amp;&amp; swift run</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <img src="assets/AppIcon_1024.png" width="24" height="24" style="border-radius: 6px;">
+        <span><strong>DeskOrbit</strong> — Crafted with open-source AI pairing &amp; native Swift.</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/releases" target="_blank" rel="noopener">Releases</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/blob/main/CONTRIBUTING.md" target="_blank" rel="noopener">Contributing</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Interactive Demo Script -->
+  <script>
+    const brightSlider = document.getElementById('demo-brightness-slider');
+    const brightLabel = document.getElementById('demo-brightness-label');
+    const monitorStat = document.getElementById('monitor-stat');
+    const virtualScreen = document.getElementById('virtual-screen');
+
+    brightSlider.addEventListener('input', (e) => {
+      const val = e.target.value;
+      brightLabel.textContent = `${val}%`;
+      monitorStat.textContent = `${val}%`;
+      // Simulate display dimming via CSS brightness filter
+      const factor = val / 100;
+      virtualScreen.style.filter = `brightness(${factor})`;
+    });
+
+    const volSlider = document.getElementById('demo-volume-slider');
+    const volLabel = document.getElementById('demo-volume-label');
+    volSlider.addEventListener('input', (e) => {
+      volLabel.textContent = `${e.target.value}%`;
+    });
+  </script>
+</body>
+</html>
