@@ -568,50 +568,63 @@
     <div class="filter-bar">
       <div class="filter-pills">
         <button class="filter-pill active" data-filter="all">All Changes</button>
+        <button class="filter-pill" data-filter="battery">Power &amp; Battery</button>
         <button class="filter-pill" data-filter="display">Displays</button>
         <button class="filter-pill" data-filter="audio">Audio</button>
         <button class="filter-pill" data-filter="peripherals">Bluetooth &amp; Storage</button>
         <button class="filter-pill" data-filter="devops">Packaging &amp; CI</button>
       </div>
-      <input type="text" class="search-input" id="changelog-search" placeholder="Search changes (e.g. DDC, DMG)...">
+      <input type="text" class="search-input" id="changelog-search" placeholder="Search changes (e.g. Battery, DDC, DMG)...">
     </div>
 
     <div class="timeline">
 
-      <!-- ENTRY: Unreleased / Current Cycle -->
-      <div class="timeline-node" data-category="devops">
-        <div class="node-marker upcoming"></div>
+      <!-- ENTRY: v1.1.0 Battery & Power Release -->
+      <div class="timeline-node" data-category="battery devops">
+        <div class="node-marker"></div>
         <article class="release-card">
           <div class="release-header">
             <div class="version-meta">
-              <span class="version-tag">v1.0.1 — In Development</span>
-              <span class="pill-status pill-unreleased">Current Cycle</span>
+              <span class="version-tag">v1.1.0 — Power &amp; Battery Telemetry Release</span>
+              <span class="pill-status pill-released">Feature Update</span>
             </div>
             <div class="timestamp-box">
-              <span>Updated:</span>
-              <strong>2026-09-15 13:15 IST (+05:30)</strong>
+              <span>Released:</span>
+              <strong>2026-09-15 13:30:00 IST (+05:30)</strong>
             </div>
           </div>
 
           <p class="release-summary">
-            Enhancing documentation, adding project lifecycle changelog tracking, and establishing GitHub Pages workflow synchronization for automated release tracking.
+            Added comprehensive hardware tracking for Mac battery metrics, charging input wattage, and power adapter profiles with dual-mode Basic and Advanced telemetry views.
           </p>
 
-          <!-- Group: DevOps & Docs -->
-          <div class="change-group" data-group="devops">
-            <h3 class="change-group-title title-devops">📦 Documentation &amp; Web Lifecycle</h3>
+          <!-- Group: Battery & Power -->
+          <div class="change-group" data-group="battery">
+            <h3 class="change-group-title" style="color: #34d399;">⚡ Power &amp; Battery Subsystem (BatteryPowerService.swift)</h3>
             <ul class="change-list">
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>Interactive Web Changelog:</strong> Added <code>docs/changelog.html</code> with time and date audit trails, search filtering, and responsive timeline layout.</span>
+                <span><strong>Live Battery Percentage &amp; Status:</strong> Continuous tracking of battery level (0-100%), charging state, and AC power connection status using IOKit <code>AppleSmartBattery</code>.</span>
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>Root Repository Changelog:</strong> Added <code>CHANGELOG.md</code> adhering to Keep-a-Changelog and SemVer conventions.</span>
+                <span><strong>Real-time Charging Input Power:</strong> Calculates real-time charger input wattage (<code>IPDInputPower</code>), negotiated voltage (<code>IPDInputVoltage</code>), and current (<code>IPDInputCurrent</code>) from connected USB-C or MagSafe adapters.</span>
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>Site Navigation:</strong> Integrated Changelog links across navigation headers and footers in <code>docs/index.html</code>.</span>
+                <span><strong>Power Adapter Telemetry:</strong> Profiles connected charger name, manufacturer (Apple Inc.), rated wattage, serial number, firmware revision, and supported USB Power Delivery (USB-PD) profiles.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Battery Health &amp; Maximum Capacity:</strong> Computes true maximum health percentage by comparing nominal capacity against factory design capacity (<code>DesignCapacity</code> in mAh), cycle count wear, and condition status.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Physical Sensors &amp; Energy Flow:</strong> Real-time battery voltage, instant charge/discharge current (mA), battery power flow (Watts), temperature in °C, and controller model (<code>bq40z651</code>).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Dual-Tier User Interface:</strong> Quick glanceable battery chip and charging indicator in <code>MenuBarView</code> with instant toggle to full diagnostic telemetry; dedicated <strong>Power &amp; Battery</strong> tab in <code>DashboardView</code>.</span>
               </li>
             </ul>
           </div>
@@ -619,6 +632,14 @@
           <!-- Micro-Audit Log -->
           <div class="audit-box">
             <div class="audit-title">Timestamped Actions</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-15 13:40:00 IST</span>
+              <span class="audit-desc">Redesigned menu bar popover into a 590px side-by-side dual-column layout (controllers left, battery right)</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-15 13:30:00 IST</span>
+              <span class="audit-desc">Implemented BatteryPowerService, BatteryPowerCardView, and dual Basic/Advanced views</span>
+            </div>
             <div class="audit-row">
               <span class="audit-time">2026-09-15 13:15:13 IST</span>
               <span class="audit-desc">Created dedicated Changelog timeline with subsystem categories &amp; filters</span>

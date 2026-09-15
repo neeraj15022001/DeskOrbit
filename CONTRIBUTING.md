@@ -81,6 +81,7 @@ DeskOrbit was initially architected and developed with AI-assisted software engi
 
 1. Create a feature branch (`git checkout -b feature/amazing-feature`).
 2. Make your changes and ensure `swift build` compiles without warnings or errors.
-3. Commit with concise, descriptive commit messages.
-4. Push to your branch and open a Pull Request against `main`.
-5. Describe the hardware tested (e.g., *M2 MacBook Air with LG 27UK850 over USB-C*).
+3. **Update the Changelog:** Record all new features, improvements, or fixes in both `CHANGELOG.md` and `docs/changelog.html` with the current date, local time, and subsystem tag.
+4. Commit with concise, descriptive commit messages.
+5. Push to your branch and open a Pull Request against `main`.
+6. Describe the hardware tested (e.g., *M2 MacBook Air with LG 27UK850 over USB-C*).

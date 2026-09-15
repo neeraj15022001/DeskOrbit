@@ -7,12 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased] - 2026-09-15
+## [1.1.0] - 2026-09-15
+
+**Release Date & Time:** 2026-09-15 13:43:00 IST (+05:30)  
+**Target OS:** macOS 14.0+ (Sonoma, Sequoia)  
+**Architectures:** Universal (Apple Silicon & Intel)
 
 ### Added
-- **Web Changelog Timeline Page (`docs/changelog.html`):** Interactive, searchable release history with precise timestamps, version tags, and subsystem change categories.
-- **GitHub Pages Integration:** Added Changelog links to the landing page navigation and footer for seamless tracking across the project lifecycle.
-- **Root Changelog (`CHANGELOG.md`):** Formal Keep-a-Changelog specification file in repository root.
+- **Battery & Power Subsystem (`BatteryPowerService.swift`):**
+  - **Live Battery Percentage & Status:** Continuous tracking of battery level (`0-100%`), charging status, and power state via IOKit `AppleSmartBattery`.
+  - **Real-Time Charging Input Power:** Real-time calculation of charger input wattage (`IPDInputPower`), input voltage (`IPDInputVoltage`), and input current (`IPDInputCurrent`) from connected USB-C / MagSafe power supplies.
+  - **Power Adapter Telemetry:** Complete hardware profiling including adapter name, manufacturer (`Apple Inc.`), rated wattage, serial string, firmware version, hardware revision, and supported USB Power Delivery (USB-PD) profiles.
+  - **Battery Health & Capacity Analysis:** Accurate maximum capacity calculation comparing nominal/full charge capacity against original factory design capacity (`DesignCapacity` in mAh), health condition (`Normal` / `Service Recommended`), and cycle count wear.
+  - **Physical Battery Sensors:** Real-time battery voltage, instantaneous charge/discharge current flow (mA), battery power flow (Watts), temperature in °C, controller model (`bq40z651`), and battery serial number.
+  - **Dual-Tier User Interface:**
+    - *Basic View (Menu Bar Popover & Dashboard):* High-level glanceable battery level, connection state, charging input wattage, cycle count, and health percentage.
+    - *Advanced Telemetry View (Expandable):* Comprehensive diagnostic telemetry showing power distribution, USB-PD contract tiers, and physical battery specifications.
+  - **Dashboard Category Integration:** Added dedicated `Power & Battery` category filter in `DashboardView` with live device counts and status indicators.
+
+### Changed
+- **Side-by-Side Dual-Column Menu Bar Popover (`MenuBarView.swift`, `AppDelegate.swift`):**
+  - Expanded popover width from 320px to 590px for an un-cluttered, widescreen experience.
+  - Divided the interface into two dedicated columns: Hardware device controllers (Displays, Audio, Bluetooth, Storage) on the left side (310px) and Battery & Power telemetry on the right side (280px).
+  - Fixed cramped vertical text wrapping and label clipping on battery percentages, charging indicators, and metric chips (`BatteryPowerCardView.swift`).
 
 ---
 

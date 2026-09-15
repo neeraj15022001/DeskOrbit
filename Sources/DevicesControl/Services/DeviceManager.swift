@@ -9,6 +9,8 @@ public final class DeviceManager: ObservableObject {
     @Published public var audioDevices: [AudioItem] = []
     @Published public var bluetoothDevices: [BluetoothItem] = []
     @Published public var storageDevices: [StorageItem] = []
+    @Published public var batteryInfo: BatteryPowerInfo = BatteryPowerInfo()
+    @Published public var isAdvancedPowerView: Bool = false
 
     @Published public var defaultAudioOutput: AudioItem?
     @Published public var mainDisplay: DisplayItem?
@@ -20,6 +22,7 @@ public final class DeviceManager: ObservableObject {
     public let displayService = DisplayService()
     public let bluetoothService = BluetoothService()
     public let storageService = StorageService()
+    public let batteryService = BatteryPowerService.shared
 
     private var timer: Timer?
 
@@ -41,21 +44,36 @@ public final class DeviceManager: ObservableObject {
         storageService.onStorageChanged = { [weak self] in
             self?.refreshStorage()
         }
+
+        batteryService.onPowerDataChanged = { [weak self] info in
+            DispatchQueue.main.async {
+                self?.batteryInfo = info
+            }
+        }
     }
 
     private func startPeriodicCheck() {
-        // Periodic refresh every 5 seconds to catch Bluetooth connect/battery changes
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        // Periodic refresh every 4 seconds to catch Bluetooth, Displays & Battery changes
+        timer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: true) { [weak self] _ in
             self?.refreshBluetooth()
             self?.refreshDisplays()
+            self?.refreshBattery()
         }
     }
 
     public func refreshAll() {
+        refreshBattery()
         refreshDisplays()
         refreshAudio()
         refreshBluetooth()
         refreshStorage()
+    }
+
+    public func refreshBattery() {
+        let info = batteryService.fetchBatteryPowerInfo()
+        DispatchQueue.main.async {
+            self.batteryInfo = info
+        }
     }
 
     public func refreshDisplays() {

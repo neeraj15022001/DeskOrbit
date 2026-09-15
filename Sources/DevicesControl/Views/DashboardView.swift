@@ -8,7 +8,7 @@ public struct DashboardView: View {
     }
 
     private let columns = [
-        GridItem(.adaptive(minimum: 280, maximum: 400), spacing: 16)
+        GridItem(.adaptive(minimum: 320, maximum: 500), spacing: 16)
     ]
 
     public var body: some View {
@@ -32,7 +32,7 @@ public struct DashboardView: View {
                 }
             }
             .listStyle(.sidebar)
-            .navigationSplitViewColumnWidth(min: 180, ideal: 200, max: 240)
+            .navigationSplitViewColumnWidth(min: 180, ideal: 210, max: 250)
         } detail: {
             VStack(spacing: 0) {
                 // Top Header / Action Bar
@@ -70,6 +70,10 @@ public struct DashboardView: View {
 
                 ScrollView {
                     LazyVGrid(columns: columns, spacing: 16) {
+                        if manager.activeCategory == .all || manager.activeCategory == .battery {
+                            batterySection
+                        }
+
                         if manager.activeCategory == .all || manager.activeCategory == .display {
                             displaysSection
                         }
@@ -91,10 +95,18 @@ public struct DashboardView: View {
             }
             .background(Color(NSColor.windowBackgroundColor))
         }
-        .frame(minWidth: 820, minHeight: 540)
+        .frame(minWidth: 840, minHeight: 560)
     }
 
     // MARK: - Sections
+
+    @ViewBuilder
+    private var batterySection: some View {
+        if manager.batteryInfo.isInstalled || manager.batteryInfo.isExternalConnected {
+            BatteryPowerCardView(manager: manager, isCompact: false)
+        }
+    }
+
     @ViewBuilder
     private var displaysSection: some View {
         ForEach(manager.displays) { display in
@@ -123,6 +135,7 @@ public struct DashboardView: View {
                         get: { Double(display.brightness) },
                         set: { manager.setDisplayBrightness(displayID: display.id, brightness: Float($0)) }
                     ), in: 0.0...1.0)
+                    .controlSize(.regular)
                 }
             }
         }
@@ -130,44 +143,40 @@ public struct DashboardView: View {
 
     @ViewBuilder
     private var audioSection: some View {
-        ForEach(manager.audioDevices) { audio in
+        ForEach(manager.audioDevices.filter { $0.isOutput }) { device in
             DeviceCardView(
-                title: audio.name,
-                subtitle: "\(audio.transportType) • \(audio.isOutput ? "Output" : "Input")",
-                iconName: audio.isOutput ? "speaker.wave.2.fill" : "mic.fill",
+                title: device.name,
+                subtitle: "\(device.transportType) • \(device.isOutput ? "Output" : "Input")",
+                iconName: device.isOutput ? "speaker.wave.2" : "mic",
                 iconColor: .blue,
-                badgeText: audio.isDefaultOutput ? "Default Output" : (audio.isDefaultInput ? "Default Input" : nil),
+                badgeText: device.isDefaultOutput ? "Default Output" : nil,
                 badgeColor: .blue
             ) {
                 VStack(spacing: 10) {
-                    if audio.isOutput {
-                        HStack {
-                            Button(action: { manager.toggleAudioMute(device: audio) }) {
-                                Image(systemName: audio.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                    .foregroundColor(audio.isMuted ? .red : .primary)
-                            }
-                            .buttonStyle(.plain)
-
-                            Slider(value: Binding(
-                                get: { Double(audio.volume) },
-                                set: { manager.setAudioVolume(deviceID: audio.id, volume: Float($0)) }
-                            ), in: 0.0...1.0)
-                            .disabled(audio.isMuted)
-
-                            Text("\(Int(audio.volume * 100))%")
-                                .font(.system(size: 11, design: .monospaced))
-                                .frame(width: 35, alignment: .trailing)
+                    HStack {
+                        Button(action: { manager.toggleAudioMute(device: device) }) {
+                            Image(systemName: device.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
+                                .foregroundColor(device.isMuted ? .red : .accentColor)
                         }
+                        .buttonStyle(.plain)
+
+                        Slider(value: Binding(
+                            get: { Double(device.volume) },
+                            set: { manager.setAudioVolume(deviceID: device.id, volume: Float($0)) }
+                        ), in: 0.0...1.0)
+                        .disabled(device.isMuted)
+
+                        Text("\(Int(device.volume * 100))%")
+                            .font(.system(size: 12, weight: .medium, design: .monospaced))
+                            .frame(width: 36, alignment: .trailing)
                     }
 
-                    HStack {
-                        if !audio.isDefaultOutput && audio.isOutput {
-                            Button("Set as Default") {
-                                manager.setDefaultAudioOutput(device: audio)
-                            }
-                            .controlSize(.small)
+                    if !device.isDefaultOutput {
+                        Button(action: { manager.setDefaultAudioOutput(device: device) }) {
+                            Text("Set as Default Output")
+                                .frame(maxWidth: .infinity)
                         }
-                        Spacer()
+                        .controlSize(.small)
                     }
                 }
             }
@@ -176,36 +185,35 @@ public struct DashboardView: View {
 
     @ViewBuilder
     private var bluetoothSection: some View {
-        ForEach(manager.bluetoothDevices) { bt in
+        ForEach(manager.bluetoothDevices) { device in
             DeviceCardView(
-                title: bt.name,
-                subtitle: bt.deviceType,
-                iconName: bt.isConnected ? "dot.radiowaves.left.and.right" : "wave.3.left",
-                iconColor: bt.isConnected ? .green : .gray,
-                badgeText: bt.isConnected ? "Connected" : "Paired",
-                badgeColor: bt.isConnected ? .green : .secondary
+                title: device.name,
+                subtitle: device.deviceType,
+                iconName: "headphones",
+                iconColor: .cyan,
+                badgeText: device.isConnected ? "Connected" : "Paired",
+                badgeColor: device.isConnected ? .green : .secondary
             ) {
-                VStack(spacing: 8) {
-                    if let battery = bt.batteryPercent {
-                        HStack {
+                HStack {
+                    if let battery = device.batteryPercent {
+                        HStack(spacing: 4) {
                             Image(systemName: "battery.100")
                                 .foregroundColor(.green)
-                            Text("Battery Level")
-                                .font(.system(size: 11))
-                                .foregroundColor(.secondary)
-                            Spacer()
                             Text("\(battery)%")
-                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .font(.system(size: 12, weight: .medium, design: .monospaced))
                         }
+                    } else {
+                        Text("Battery N/A")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
-                    HStack {
-                        Button(action: { manager.toggleBluetooth(device: bt) }) {
-                            Text(bt.isConnected ? "Disconnect" : "Connect")
-                        }
-                        .controlSize(.small)
-                        Spacer()
+                    Spacer()
+
+                    Button(action: { manager.toggleBluetooth(device: device) }) {
+                        Text(device.isConnected ? "Disconnect" : "Connect")
                     }
+                    .controlSize(.small)
                 }
             }
         }
@@ -216,10 +224,10 @@ public struct DashboardView: View {
         ForEach(manager.storageDevices) { storage in
             DeviceCardView(
                 title: storage.name,
-                subtitle: "\(storage.formattedFree) available of \(storage.formattedTotal)",
+                subtitle: "\(storage.formattedFree) free of \(storage.formattedTotal)",
                 iconName: "externaldrive.fill",
                 iconColor: .orange,
-                badgeText: storage.isRemovable ? "Removable" : nil,
+                badgeText: storage.isEjectable ? "Removable" : nil,
                 badgeColor: .orange
             ) {
                 VStack(spacing: 8) {
@@ -247,7 +255,10 @@ public struct DashboardView: View {
     private func deviceCount(for category: DeviceCategory) -> Int {
         switch category {
         case .all:
-            return manager.displays.count + manager.audioDevices.count + manager.bluetoothDevices.count + manager.storageDevices.count
+            let batt = (manager.batteryInfo.isInstalled || manager.batteryInfo.isExternalConnected) ? 1 : 0
+            return batt + manager.displays.count + manager.audioDevices.count + manager.bluetoothDevices.count + manager.storageDevices.count
+        case .battery:
+            return (manager.batteryInfo.isInstalled || manager.batteryInfo.isExternalConnected) ? 1 : 0
         case .display: return manager.displays.count
         case .audio: return manager.audioDevices.count
         case .bluetooth: return manager.bluetoothDevices.count
@@ -260,6 +271,7 @@ public struct DashboardView: View {
         let audio = manager.audioDevices.count
         let btConnected = manager.bluetoothDevices.filter { $0.isConnected }.count
         let storage = manager.storageDevices.count
-        return "\(displays) display\(displays == 1 ? "" : "s"), \(audio) audio, \(btConnected) bluetooth active, \(storage) storage"
+        let batt = manager.batteryInfo.isInstalled ? "\(manager.batteryInfo.currentPercentage)% Battery" : "AC Connected"
+        return "\(batt), \(displays) display\(displays == 1 ? "" : "s"), \(audio) audio, \(btConnected) bluetooth active, \(storage) storage"
     }
 }
