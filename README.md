@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://neeraj15022001.github.io/DeskOrbit/"><img src="https://img.shields.io/badge/Website-Live%20Demo-cyan?style=flat-square" alt="Website"></a>
+  <a href="https://neeraj15022001.github.io/DeskOrbit/changelog.html"><img src="https://img.shields.io/badge/Changelog-Timeline-purple?style=flat-square" alt="Changelog"></a>
   <a href="https://developer.apple.com/macos/"><img src="https://img.shields.io/badge/macOS-14.0%2B-blue?logo=apple&style=flat-square" alt="macOS 14+"></a>
   <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-6.0-orange?logo=swift&style=flat-square" alt="Swift 6"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License MIT"></a>
@@ -116,6 +117,7 @@ DeskOrbit was conceptualized, architected, and implemented through **human-AI co
 ## Community & Contributing
 
 Contributions are welcome! Please read:
+- [Changelog](CHANGELOG.md) (or explore the [Interactive Web Timeline](https://neeraj15022001.github.io/DeskOrbit/changelog.html))
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [Security Policy](SECURITY.md)

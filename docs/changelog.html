@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Changelog — DeskOrbit</title>
+  <meta name="description" content="Chronological history, timestamps, and release logs for DeskOrbit macOS hardware controller.">
+  <link rel="icon" type="image/png" href="assets/AppIcon_1024.png">
+
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="DeskOrbit Changelog — Release & Development History">
+  <meta property="og:description" content="Track every feature, commit, bug fix, and architectural update in DeskOrbit with exact dates and timestamps.">
+  <meta property="og:image" content="assets/banner.svg">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root {
+      --bg-main: #070a12;
+      --bg-card: #0e1526;
+      --bg-card-hover: #141d34;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(56, 189, 248, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #0284c7;
+      --accent-purple: #818cf8;
+      --accent-green: #34d399;
+      --accent-amber: #f59e0b;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Ambient Glows */
+    .glow-sphere-1 {
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 750px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.2) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(7, 10, 18, 0) 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: rgba(7, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo img {
+      width: 36px;
+      height: 36px;
+      border-radius: 9px;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.92rem;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+
+    .nav-links a:hover,
+    .nav-links a.active {
+      color: var(--accent-cyan);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 9px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      border: 1px solid transparent;
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #38bdf8 0%, #0284c7 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.05);
+    }
+
+    /* Page Header */
+    .header-section {
+      padding: 60px 0 35px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 5px 14px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.1);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      color: var(--accent-cyan);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 18px;
+    }
+
+    .header-section h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 12px;
+      background: linear-gradient(180deg, #ffffff 30%, #94a3b8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-section p {
+      font-size: 1.15rem;
+      color: var(--text-secondary);
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* Filter & Search Bar */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin: 30px 0 45px;
+      padding: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-secondary);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .filter-pill:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-primary);
+    }
+
+    .filter-pill.active {
+      background: rgba(56, 189, 248, 0.15);
+      border-color: rgba(56, 189, 248, 0.4);
+      color: var(--accent-cyan);
+      font-weight: 600;
+    }
+
+    .search-input {
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+      color: var(--text-primary);
+      padding: 8px 14px;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      outline: none;
+      width: 240px;
+      transition: border-color 0.15s;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-cyan);
+    }
+
+    /* Timeline Structure */
+    .timeline {
+      position: relative;
+      padding-left: 36px;
+      margin-bottom: 80px;
+    }
+
+    .timeline::before {
+      content: '';
+      position: absolute;
+      left: 11px;
+      top: 15px;
+      bottom: 20px;
+      width: 2px;
+      background: linear-gradient(180deg, var(--accent-cyan) 0%, rgba(56, 189, 248, 0.2) 80%, transparent 100%);
+    }
+
+    .timeline-node {
+      position: relative;
+      margin-bottom: 50px;
+    }
+
+    .node-marker {
+      position: absolute;
+      left: -36px;
+      top: 6px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--bg-main);
+      border: 3px solid var(--accent-cyan);
+      box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .node-marker.upcoming {
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.5);
+    }
+
+    .node-marker.minor {
+      border-color: var(--accent-purple);
+      box-shadow: 0 0 12px rgba(129, 140, 248, 0.5);
+    }
+
+    /* Release Card */
+    .release-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 26px 30px;
+      transition: all 0.2s ease;
+    }
+
+    .release-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .release-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .version-meta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .version-tag {
+      font-size: 1.25rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .pill-status {
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .pill-released {
+      background: rgba(52, 211, 153, 0.15);
+      border: 1px solid rgba(52, 211, 153, 0.3);
+      color: var(--accent-green);
+    }
+
+    .pill-unreleased {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.3);
+      color: var(--accent-amber);
+    }
+
+    .commit-badge {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      text-decoration: none;
+    }
+
+    .commit-badge:hover {
+      background: rgba(56, 189, 248, 0.16);
+    }
+
+    .timestamp-box {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .timestamp-box strong {
+      color: var(--text-secondary);
+    }
+
+    .release-summary {
+      color: var(--text-secondary);
+      font-size: 0.98rem;
+      margin-bottom: 22px;
+      line-height: 1.6;
+    }
+
+    /* Sectional Change Groups */
+    .change-group {
+      margin-bottom: 20px;
+    }
+
+    .change-group-title {
+      font-size: 0.88rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .title-display { color: #38bdf8; }
+    .title-audio { color: #818cf8; }
+    .title-bluetooth { color: #34d399; }
+    .title-storage { color: #f59e0b; }
+    .title-app { color: #ec4899; }
+    .title-devops { color: #a78bfa; }
+
+    .change-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .change-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .change-bullet {
+      color: var(--accent-cyan);
+      font-weight: bold;
+      line-height: 1.4;
+    }
+
+    .change-item code {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-size: 0.82rem;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--text-primary);
+    }
+
+    /* Sub-timeline Audit Table */
+    .audit-box {
+      margin-top: 24px;
+      padding: 16px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+    }
+
+    .audit-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 12px;
+    }
+
+    .audit-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.84rem;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .audit-row:last-child {
+      border-bottom: none;
+    }
+
+    .audit-time {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      color: var(--accent-cyan);
+      font-size: 0.8rem;
+    }
+
+    .audit-desc {
+      color: var(--text-secondary);
+      text-align: right;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 40px 0;
+      color: var(--text-secondary);
+      font-size: 0.88rem;
+    }
+
+    .footer-inner {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 20px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .header-section h1 { font-size: 2.2rem; }
+      .release-header { flex-direction: column; align-items: flex-start; }
+      .audit-row { flex-direction: column; align-items: flex-start; gap: 2px; }
+      .audit-desc { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-sphere-1"></div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="nav-inner">
+      <a href="index.html" class="logo">
+        <img src="assets/AppIcon_1024.png" alt="DeskOrbit Icon">
+        <span>DeskOrbit</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="index.html#interactive-demo">Demo</a></li>
+        <li><a href="changelog.html" class="active">Changelog</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+        <span>Download .DMG</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <header class="container header-section">
+    <div class="badge-pill">
+      <span>Lifecycle &amp; Audit Log</span>
+    </div>
+    <h1>Release Changelog</h1>
+    <p>
+      A complete, chronological record of every update, subsystem evolution, bug fix, and architectural milestone throughout DeskOrbit's lifecycle.
+    </p>
+  </header>
+
+  <!-- Main Timeline Container -->
+  <main class="container">
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-pills">
+        <button class="filter-pill active" data-filter="all">All Changes</button>
+        <button class="filter-pill" data-filter="display">Displays</button>
+        <button class="filter-pill" data-filter="audio">Audio</button>
+        <button class="filter-pill" data-filter="peripherals">Bluetooth &amp; Storage</button>
+        <button class="filter-pill" data-filter="devops">Packaging &amp; CI</button>
+      </div>
+      <input type="text" class="search-input" id="changelog-search" placeholder="Search changes (e.g. DDC, DMG)...">
+    </div>
+
+    <div class="timeline">
+
+      <!-- ENTRY: Unreleased / Current Cycle -->
+      <div class="timeline-node" data-category="devops">
+        <div class="node-marker upcoming"></div>
+        <article class="release-card">
+          <div class="release-header">
+            <div class="version-meta">
+              <span class="version-tag">v1.0.1 — In Development</span>
+              <span class="pill-status pill-unreleased">Current Cycle</span>
+            </div>
+            <div class="timestamp-box">
+              <span>Updated:</span>
+              <strong>2026-09-15 13:15 IST (+05:30)</strong>
+            </div>
+          </div>
+
+          <p class="release-summary">
+            Enhancing documentation, adding project lifecycle changelog tracking, and establishing GitHub Pages workflow synchronization for automated release tracking.
+          </p>
+
+          <!-- Group: DevOps & Docs -->
+          <div class="change-group" data-group="devops">
+            <h3 class="change-group-title title-devops">📦 Documentation &amp; Web Lifecycle</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Interactive Web Changelog:</strong> Added <code>docs/changelog.html</code> with time and date audit trails, search filtering, and responsive timeline layout.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Root Repository Changelog:</strong> Added <code>CHANGELOG.md</code> adhering to Keep-a-Changelog and SemVer conventions.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Site Navigation:</strong> Integrated Changelog links across navigation headers and footers in <code>docs/index.html</code>.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Micro-Audit Log -->
+          <div class="audit-box">
+            <div class="audit-title">Timestamped Actions</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-15 13:15:13 IST</span>
+              <span class="audit-desc">Created dedicated Changelog timeline with subsystem categories &amp; filters</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-15 13:00:00 IST</span>
+              <span class="audit-desc">Updated README.md with live GitHub Pages website banner badge</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- ENTRY: v1.0.0 Public Launch -->
+      <div class="timeline-node" data-category="display audio peripherals devops">
+        <div class="node-marker"></div>
+        <article class="release-card">
+          <div class="release-header">
+            <div class="version-meta">
+              <span class="version-tag">v1.0.0 — Initial Public Release</span>
+              <span class="pill-status pill-released">Milestone</span>
+              <a href="https://github.com/neeraj15022001/DeskOrbit/commit/26f7d99" class="commit-badge" target="_blank" rel="noopener">26f7d99</a>
+            </div>
+            <div class="timestamp-box">
+              <span>Released:</span>
+              <strong>2026-09-14 17:15:00 IST (+05:30)</strong>
+            </div>
+          </div>
+
+          <p class="release-summary">
+            The inaugural open-source release of <strong>DeskOrbit</strong>, unifying external displays, audio DACs, Bluetooth peripherals, and external storage drives into a responsive native macOS menu bar accessory and Home-style dashboard.
+          </p>
+
+          <!-- Group: Display -->
+          <div class="change-group" data-group="display">
+            <h3 class="change-group-title title-display">🖥️ Display Subsystem (DisplayService.swift)</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Apple Silicon DDC/CI:</strong> Integrated <code>IOAVService</code> communication over I²C address <code>0x37</code> using VCP opcode <code>0x10</code> for external monitor hardware brightness.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Apple Native Displays:</strong> Native backlight brightness support via private <code>DisplayServices</code> framework for internal Mac displays and Apple Studio Displays.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>GPU Gamma LUT Scaling:</strong> Linear color lookup table scaling via <code>CGSetDisplayTransferByTable</code> and <code>CGSetDisplayTransferByFormula</code> for non-DDC screens.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Software Dimming Overlay:</strong> Floating transparent <code>.screenSaver</code> level overlay window providing click-through dimming across all virtual Spaces.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Group: Audio -->
+          <div class="change-group" data-group="audio">
+            <h3 class="change-group-title title-audio">🔊 Audio Subsystem (AudioService.swift)</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>CoreAudio Hardware HAL:</strong> Real-time volume scalar manipulation using <code>kAudioHardwareServiceDeviceProperty_VirtualMainVolume</code>.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Fast Output Switching:</strong> Single-click default audio route switching between internal speakers, USB audio interfaces, and Bluetooth headsets.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Live Hardware Listener:</strong> Bound <code>AudioObjectAddPropertyListenerBlock</code> to automatically refresh UI on device disconnect/connect or volume change.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Group: Bluetooth & Storage -->
+          <div class="change-group" data-group="peripherals">
+            <h3 class="change-group-title title-bluetooth">⚡ Bluetooth &amp; External Storage</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Battery Monitoring:</strong> Extracted power percentages via IOKit <code>IOPSCopyPowerSourcesInfo</code> for connected Bluetooth devices (AirPods, Magic Trackpad, mice).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Drive Capacity Gauges:</strong> Volume capacity calculation using <code>NSWorkspace</code> and <code>DiskArbitration</code> displaying used vs. free storage.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Safe Volume Eject:</strong> Clean drive unmounting and ejection via <code>NSWorkspace.shared.unmountAndEjectDevice</code>.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Group: DevOps & Open Source -->
+          <div class="change-group" data-group="devops">
+            <h3 class="change-group-title title-devops">📦 Architecture, Packaging &amp; Open Source</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Dual-Mode AppKit Architecture:</strong> Configured as <code>LSUIElement = true</code> menu bar accessory with dynamic policy elevation to <code>.regular</code> for the dashboard window.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Packaging Scripts:</strong> Created <code>bundle_app.sh</code> and <code>create_dmg.sh</code> for automated release compilation and compressed <code>.dmg</code> generation.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>CI/CD Pipelines:</strong> Created GitHub Actions workflows for automated macOS builds (<code>ci.yml</code>), release assets (<code>release.yml</code>), and Pages deployment (<code>pages.yml</code>).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Community Governance:</strong> Published under the MIT License with Contributor Covenant v2.1, Security policies, and AI co-creation provenance disclosure.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Micro-Audit Log -->
+          <div class="audit-box">
+            <div class="audit-title">Timestamped Lifecycle Milestones</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-14 17:45:00 IST</span>
+              <span class="audit-desc">Published responsive product landing page with interactive simulator</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-14 17:35:00 IST</span>
+              <span class="audit-desc">Engineered DMG builder script and automated release packaging workflow</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-14 17:15:00 IST</span>
+              <span class="audit-desc">Pushed initial v1.0.0 commit (26f7d99) and published public repository</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-14 16:45:00 IST</span>
+              <span class="audit-desc">Verified unique name 'DeskOrbit', generated vector banner &amp; 1024px icon</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-09-14 15:30:00 IST</span>
+              <span class="audit-desc">Finished native Swift 6 engine (IOAVService, CoreAudio, IOBluetooth, DiskArbitration)</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <img src="assets/AppIcon_1024.png" width="24" height="24" style="border-radius: 6px;">
+        <span><strong>DeskOrbit</strong> — Open Source Hardware Hub for macOS.</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/releases" target="_blank" rel="noopener">Releases</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a></li>
+      </ul>
+    </div>
+  </footer>
+
+  <!-- Search & Category Filtering Script -->
+  <script>
+    const filterPills = document.querySelectorAll('.filter-pill');
+    const searchInput = document.getElementById('changelog-search');
+    const nodes = document.querySelectorAll('.timeline-node');
+
+    // Filter by category
+    filterPills.forEach(pill => {
+      pill.addEventListener('click', () => {
+        filterPills.forEach(p => p.classList.remove('active'));
+        pill.classList.add('active');
+
+        const filter = pill.getAttribute('data-filter');
+        applyFilters(filter, searchInput.value.toLowerCase().trim());
+      });
+    });
+
+    // Search filter
+    searchInput.addEventListener('input', (e) => {
+      const activePill = document.querySelector('.filter-pill.active');
+      const filter = activePill ? activePill.getAttribute('data-filter') : 'all';
+      applyFilters(filter, e.target.value.toLowerCase().trim());
+    });
+
+    function applyFilters(category, query) {
+      nodes.forEach(node => {
+        const nodeCategories = node.getAttribute('data-category') || '';
+        const matchesCategory = (category === 'all') || nodeCategories.includes(category);
+        const textContent = node.textContent.toLowerCase();
+        const matchesQuery = !query || textContent.includes(query);
+
+        if (matchesCategory && matchesQuery) {
+          node.style.display = 'block';
+        } else {
+          node.style.display = 'none';
+        }
+      });
+    }
+  </script>
+</body>
+</html>
