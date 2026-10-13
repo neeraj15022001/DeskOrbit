@@ -14,18 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 **Architectures:** Universal (Apple Silicon & Intel)
 
 ### Added
-- **WiZ Connected Smart Lighting Subsystem (`WizLightService.swift`):**
-  - **Philips A60 WiZ Protocol Integration:** Native local network UDP communication on port `38899` (`getPilot`, `setPilot`, `getSystemConfig`) with zero cloud dependencies or lag.
-  - **Samsung SmartThings Cloud Bridge:** Complete cloud REST API integration for environments where local UDP broadcast is isolated:
-    - **Power & Dimming:** Remote ON/OFF power toggling and `switchLevel` dimming (10% to 100%).
-    - **Cloud Color Control:** Full-spectrum RGB color translation to normalized HSV (Hue `0-100`, Saturation `0-100`) sending `setColor` via SmartThings `colorControl` capability.
-    - **Cloud Color Temperature:** Seamless Kelvin tuning (2200K to 6500K) via SmartThings `colorTemperature` capability.
-    - **Quick Scene Presets:** Cloud dispatching for Warm White, Daylight, Cozy, and Night Light presets.
-    - **Intelligent Device Resolution:** Dynamic mapping resolving local bulb identifiers and SmartThings cloud UUIDs.
-  - **Full 16M RGB Color Tuning:** Support for full-spectrum RGB color tuning with quick color palette swatches (Warm Amber, Candlelight, Sunset Orange, Crimson Red, Neon Pink, Cyber Cyan, Emerald Green) and custom color inputs.
-  - **Tunable White Temperature (Kelvin):** Continuous color temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) with quick scene presets (Warm White, Daylight, Cozy, Night Light).
-  - **Network Auto-Discovery & Manual Pairing:** Subnet UDP broadcast scanning (`discoverLights`) alongside manual IP address pairing with persistent local storage in `UserDefaults`.
-  - **Dual Interface Integration:** Interactive smart bulb cards integrated into the Menu Bar popover (`MenuBarView.swift`) and dedicated `Smart Lights` category deck in the full Dashboard (`DashboardView.swift`).
+- **Smart Lighting Subsystem — Samsung SmartThings Integration (`WizLightService.swift`):**
+  - **Direct SmartThings Cloud REST Integration:** Dedicated cloud REST API communication (`api.smartthings.com/v1`) controlling Philips WiZ A60 smart bulbs via Samsung SmartThings with zero local UDP socket blocking.
+  - **Power & Dimming Control:** Remote ON/OFF toggling and `switchLevel` dimming (10% to 100%).
+  - **16M RGB Color Tuning:** Full-spectrum RGB color selection with rapid preset swatches, translating RGB to normalized HSV (Hue `0-100`, Saturation `0-100`) via SmartThings `colorControl` capability.
+  - **Tunable White Temperature (Kelvin):** Continuous Kelvin temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) via SmartThings `colorTemperature` capability.
+  - **Quick Scene Presets:** Instant scene presets (Warm White, Daylight, Cozy, Night Light).
+  - **Automatic Status Synchronization:** Background status polling (`GET /v1/devices/{deviceId}/status`) keeping power, brightness, color, and temperature in sync without false offline indicators.
+
+### Fixed
+- **API Request Debouncing & Queue Freezes:** Implemented 250ms debouncing on continuous sliders (brightness & color temperature) and atomic command batching to prevent SmartThings API rate limiting and queue stalls after multiple rapid actions.
+- **Removed Local Wi-Fi Detection & Purged Duplicates:** Purged all unreachable local Wi-Fi UDP instances, transitioning light management exclusively to the reliable SmartThings Cloud integration.
 
 ---
 

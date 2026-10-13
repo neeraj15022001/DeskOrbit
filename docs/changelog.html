@@ -596,16 +596,24 @@
           </div>
 
           <p class="release-summary">
-            Added native support for <strong>WiZ Connected smart bulbs from Philips (A60)</strong>, enabling zero-cloud local network control for power, dimming, full-spectrum 16M RGB color selection, and tunable white color temperature directly from your Mac.
+            Added seamless cloud integration for <strong>Philips WiZ smart bulbs via Samsung SmartThings Cloud REST API</strong>, enabling responsive power, dimming, full-spectrum 16M RGB color selection, and tunable white color temperature directly from your Mac.
           </p>
 
           <!-- Group: Smart Lighting -->
           <div class="change-group" data-group="lights">
-            <h3 class="change-group-title" style="color: #fbbf24;">💡 Smart Lighting Subsystem (WizLightService.swift)</h3>
+            <h3 class="change-group-title" style="color: #fbbf24;">💡 Smart Lighting Subsystem — SmartThings Integration</h3>
             <ul class="change-list">
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>Local UDP Protocol:</strong> Communicates over local Wi-Fi UDP port <code>38899</code> (<code>getPilot</code>, <code>setPilot</code>, <code>getSystemConfig</code>) with instant sub-millisecond response and zero cloud lag or token requirements.</span>
+                <span><strong>Dedicated SmartThings Cloud REST:</strong> Directly interfaces with <code>api.smartthings.com/v1</code> without blocking local UDP socket timeouts or network isolation issues.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>API Debouncing &amp; Queue Safety:</strong> Added 250ms debouncing on continuous slider operations (brightness &amp; color temperature) and atomic command batching to prevent API rate limiting and stalls after rapid actions.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Purged Wi-Fi Duplicates:</strong> Exclusively manages verified SmartThings cloud devices, removing local Wi-Fi instances and offline false-positives.</span>
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>
@@ -613,19 +621,11 @@
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>Samsung SmartThings Cloud Bridge:</strong> Full cloud REST integration (<code>api.smartthings.com/v1</code>) for networks where local UDP is blocked: dispatches <code>switch</code> (on/off), <code>switchLevel</code> (dimming), <code>colorControl</code> (<code>setColor</code> with HSV hue/saturation conversion), and <code>colorTemperature</code> (2200K–6500K).</span>
+                <span><strong>16M RGB Color Tuning:</strong> Full-spectrum RGB color selection with rapid preset swatches, translating RGB to normalized HSV (Hue 0–100%, Saturation 0–100%) via SmartThings <code>colorControl</code>.</span>
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>
-                <span><strong>16M RGB Color Tuning:</strong> Full-spectrum RGB color selection with rapid preset swatches (Warm Amber, Sunset Orange, Crimson Red, Neon Pink, Cyber Cyan, Emerald Green) and custom color inputs.</span>
-              </li>
-              <li class="change-item">
-                <span class="change-bullet">•</span>
-                <span><strong>Tunable White Temperature:</strong> Continuous Kelvin temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) with quick scene triggers (Warm White, Daylight, Cozy, Night Light).</span>
-              </li>
-              <li class="change-item">
-                <span class="change-bullet">•</span>
-                <span><strong>Local Network Auto-Discovery:</strong> Subnet UDP broadcast scanning (<code>discoverLights</code>) alongside manual IP address pairing with persistent local storage in <code>UserDefaults</code>.</span>
+                <span><strong>Tunable White Temperature:</strong> Continuous Kelvin temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) with quick scene presets (Warm White, Daylight, Cozy, Night Light).</span>
               </li>
               <li class="change-item">
                 <span class="change-bullet">•</span>

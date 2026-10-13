@@ -141,7 +141,7 @@ public struct MenuBarView: View {
                                                 .controlSize(.mini)
                                         } else {
                                             Image(systemName: "arrow.clockwise")
-                                            Text("Scan")
+                                            Text("Sync")
                                         }
                                     }
                                     .font(.system(size: 9, weight: .semibold))
@@ -152,12 +152,12 @@ public struct MenuBarView: View {
 
                             if manager.smartLights.isEmpty {
                                 HStack {
-                                    Text("No WiZ bulbs configured")
+                                    Text("No lights configured")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Button(action: onOpenDashboard) {
-                                        Text("+ Add IP")
+                                        Text("Setup")
                                             .font(.system(size: 9, weight: .bold))
                                     }
                                     .controlSize(.mini)

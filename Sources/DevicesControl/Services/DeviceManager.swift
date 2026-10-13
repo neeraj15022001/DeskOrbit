@@ -163,28 +163,20 @@ public final class DeviceManager: ObservableObject {
     }
 
     public func discoverSmartLights() {
+        syncSmartThings()
+    }
+
+    public func syncSmartThings() {
         isDiscoveringLights = true
-        showStatus("Scanning Wi-Fi for WiZ Smart Bulbs...")
-        wizLightService.discoverLights { [weak self] discovered in
+        showStatus("Syncing SmartThings Cloud...")
+        wizLightService.fetchSmartThingsDevices { [weak self] discovered in
             DispatchQueue.main.async {
                 self?.isDiscoveringLights = false
                 if discovered.isEmpty {
-                    self?.showStatus("No new WiZ bulbs found on broadcast. Try adding IP directly.")
+                    self?.showStatus("No bulbs found. Verify your SmartThings token.")
                 } else {
-                    self?.showStatus("Found \(discovered.count) WiZ Smart Bulb(s)!")
+                    self?.showStatus("Synced \(discovered.count) bulb(s) from SmartThings!")
                 }
-            }
-        }
-    }
-
-    public func addSmartLightByIP(ip: String, customName: String? = nil) {
-        showStatus("Connecting to WiZ Bulb at \(ip)...")
-        wizLightService.addLight(ip: ip, customName: customName) { [weak self] result in
-            switch result {
-            case .success(let light):
-                self?.showStatus("Connected to \(light.name) (\(light.ip))!")
-            case .failure(let err):
-                self?.showStatus("Error: \(err.localizedDescription)")
             }
         }
     }

@@ -59,22 +59,15 @@ public struct DashboardView: View {
 
                     // Smart Bulb Actions
                     if manager.activeCategory == .all || manager.activeCategory == .lights {
-                        Button(action: { manager.discoverSmartLights() }) {
+                        Button(action: { manager.syncSmartThings() }) {
                             HStack(spacing: 4) {
                                 if manager.isDiscoveringLights {
                                     ProgressView().controlSize(.mini)
                                 } else {
-                                    Image(systemName: "lightbulb.and.waveform.fill")
+                                    Image(systemName: "arrow.triangle.2.circlepath")
                                 }
-                                Text("Scan WiZ")
+                                Text("Sync SmartThings")
                             }
-                        }
-                        .controlSize(.regular)
-
-                        Button(action: {
-                            manager.isShowingAddBulbSheet.toggle()
-                        }) {
-                            Label("Add IP", systemImage: "plus")
                         }
                         .controlSize(.regular)
                     }
@@ -88,95 +81,40 @@ public struct DashboardView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 12)
 
-                // Inline Add Bulb IP Bar
-                if manager.isShowingAddBulbSheet {
-                    HStack(spacing: 12) {
-                        Image(systemName: "lightbulb.fill")
-                            .foregroundColor(.yellow)
-
-                        TextField("Bulb IP Address (e.g. 192.168.1.50)", text: $manager.newBulbIPInput)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 240)
-
-                        TextField("Name (e.g. Desk Lamp A60)", text: $manager.newBulbNameInput)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 200)
-
-                        Button("Connect") {
-                            guard !manager.newBulbIPInput.trimmingCharacters(in: .whitespaces).isEmpty else { return }
-                            manager.addSmartLightByIP(
-                                ip: manager.newBulbIPInput,
-                                customName: manager.newBulbNameInput.isEmpty ? nil : manager.newBulbNameInput
-                            )
-                            manager.newBulbIPInput = ""
-                            manager.newBulbNameInput = ""
-                            manager.isShowingAddBulbSheet = false
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.small)
-
-                        Button("Cancel") {
-                            manager.isShowingAddBulbSheet = false
-                        }
-                        .buttonStyle(.plain)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-
-                        Spacer()
-                    }
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 8)
-                    .background(Color.accentColor.opacity(0.08))
-                }
-
-                // WiZ Security & Integration Guidance Banner
+                // SmartThings Cloud Integration Banner
                 if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        HStack(spacing: 10) {
-                            Image(systemName: "shield.lefthalf.filled")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundColor(.orange)
+                    HStack(spacing: 12) {
+                        Image(systemName: "cloud.fill")
+                            .font(.system(size: 14))
+                            .foregroundColor(.cyan)
 
-                            Text("WiZ App Requirement for Actions:")
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Samsung SmartThings Cloud Integration")
                                 .font(.system(size: 11, weight: .bold))
                                 .foregroundColor(.primary)
-
-                            Text("In WiZ App > Settings ⚙️ > Security > Turn 'Allow local communication' ON (set to 'All controls'). If set to 'Only verified controls', the bulb detects but rejects commands.")
-                                .font(.system(size: 11))
+                            Text("DeskOrbit connects to Samsung SmartThings Cloud REST API to control your Philips WiZ A60 bulb.")
+                                .font(.system(size: 10))
                                 .foregroundColor(.secondary)
-
-                            Spacer()
                         }
 
-                        // SmartThings Cloud Integration Toggle
-                        HStack(spacing: 8) {
-                            Image(systemName: "cloud.fill")
+                        Spacer()
+
+                        SecureField("Paste SmartThings PAT Token", text: Binding(
+                            get: { manager.wizLightService.smartThingsToken },
+                            set: { manager.wizLightService.setSmartThingsToken($0) }
+                        ))
+                        .textFieldStyle(.roundedBorder)
+                        .frame(maxWidth: 240)
+                        .controlSize(.small)
+
+                        if let url = URL(string: "https://account.smartthings.com/tokens") {
+                            Link("Get Token ↗", destination: url)
                                 .font(.system(size: 11))
-                                .foregroundColor(.cyan)
-
-                            Text("SmartThings Cloud Fallback:")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundColor(.secondary)
-
-                            SecureField("Paste SmartThings PAT Token", text: Binding(
-                                get: { manager.wizLightService.smartThingsToken },
-                                set: { manager.wizLightService.setSmartThingsToken($0) }
-                            ))
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 240)
-                            .controlSize(.mini)
-
-                            if let url = URL(string: "https://account.smartthings.com/tokens") {
-                                Link("Get Token ↗", destination: url)
-                                    .font(.system(size: 10))
-                            }
-
-                            Spacer()
                         }
                     }
                     .padding(.horizontal, 24)
-                    .padding(.vertical, 8)
-                    .background(Color.orange.opacity(0.06))
+                    .padding(.vertical, 10)
+                    .background(Color.cyan.opacity(0.08))
                 }
 
                 Divider()
@@ -236,22 +174,17 @@ public struct DashboardView: View {
                     Text("No WiZ Smart Bulbs Found")
                         .font(.system(size: 16, weight: .bold))
 
-                    Text("DeskOrbit communicates directly with WiZ-connected Philips A60 bulbs over your local Wi-Fi via UDP port 38899 without cloud latency.\n\nMake sure your Mac and Philips WiZ bulb are on the same Wi-Fi network, then click 'Scan WiZ' or enter its IP address manually.")
+                    Text("DeskOrbit connects directly to your Samsung SmartThings account to control your Philips WiZ A60 bulb.\n\nPaste your Personal Access Token above and click 'Sync SmartThings' to load your lights.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
 
                     HStack(spacing: 12) {
-                        Button("Scan Local Wi-Fi") {
-                            manager.discoverSmartLights()
+                        Button("Sync SmartThings") {
+                            manager.syncSmartThings()
                         }
                         .buttonStyle(.borderedProminent)
-
-                        Button("Add Bulb by IP") {
-                            manager.isShowingAddBulbSheet = true
-                        }
-                        .buttonStyle(.bordered)
                     }
                     .padding(.top, 4)
                 }

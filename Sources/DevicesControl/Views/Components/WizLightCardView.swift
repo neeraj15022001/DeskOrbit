@@ -46,7 +46,7 @@ public struct WizLightCardView: View {
                         }
                     }
 
-                    Text("WiZ UDP • \(light.ip)")
+                    Text("SmartThings Cloud • Philips WiZ A60")
                         .font(.system(size: isCompact ? 9 : 11, design: .monospaced))
                         .foregroundColor(.secondary)
                 }
