@@ -127,26 +127,63 @@ public struct WizLightCardView: View {
                     }
 
                     if !isTemperatureMode {
-                        // RGB Color Swatches
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(colorPresets, id: \.name) { preset in
-                                    Button(action: {
-                                        manager.setLightRGBColor(light: light, red: preset.r, green: preset.g, blue: preset.b)
-                                    }) {
-                                        Circle()
-                                            .fill(Color(red: Double(preset.r)/255, green: Double(preset.g)/255, blue: Double(preset.b)/255))
-                                            .frame(width: isCompact ? 18 : 22, height: isCompact ? 18 : 22)
-                                            .overlay(
-                                                Circle()
-                                                    .stroke(Color.white.opacity(isPresetSelected(preset) ? 0.9 : 0.1), lineWidth: isPresetSelected(preset) ? 2 : 1)
-                                            )
+                        HStack(spacing: 8) {
+                            // Native macOS RGB Color Picker
+                            HStack(spacing: 4) {
+                                ColorPicker("", selection: Binding(
+                                    get: {
+                                        Color(
+                                            red: Double(light.red) / 255.0,
+                                            green: Double(light.green) / 255.0,
+                                            blue: Double(light.blue) / 255.0
+                                        )
+                                    },
+                                    set: { newColor in
+                                        if let rgb = NSColor(newColor).usingColorSpace(.sRGB) {
+                                            let r = max(0, min(255, Int(round(rgb.redComponent * 255.0))))
+                                            let g = max(0, min(255, Int(round(rgb.greenComponent * 255.0))))
+                                            let b = max(0, min(255, Int(round(rgb.blueComponent * 255.0))))
+                                            manager.setLightRGBColor(light: light, red: r, green: g, blue: b)
+                                        }
                                     }
-                                    .buttonStyle(.plain)
-                                    .help(preset.name)
-                                }
+                                ), supportsOpacity: false)
+                                .labelsHidden()
+                                .frame(width: isCompact ? 22 : 26, height: isCompact ? 22 : 26)
+                                .help("Custom RGB Color Picker (Wheel, Sliders, Palette)")
+
+                                Text(String(format: "#%02X%02X%02X", light.red, light.green, light.blue))
+                                    .font(.system(size: isCompact ? 8 : 9, weight: .bold, design: .monospaced))
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color.primary.opacity(0.06))
+                            .cornerRadius(8)
+
+                            Divider()
+                                .frame(height: isCompact ? 18 : 22)
+
+                            // RGB Preset Swatches
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 6) {
+                                    ForEach(colorPresets, id: \.name) { preset in
+                                        Button(action: {
+                                            manager.setLightRGBColor(light: light, red: preset.r, green: preset.g, blue: preset.b)
+                                        }) {
+                                            Circle()
+                                                .fill(Color(red: Double(preset.r)/255, green: Double(preset.g)/255, blue: Double(preset.b)/255))
+                                                .frame(width: isCompact ? 18 : 22, height: isCompact ? 18 : 22)
+                                                .overlay(
+                                                    Circle()
+                                                        .stroke(Color.white.opacity(isPresetSelected(preset) ? 0.9 : 0.1), lineWidth: isPresetSelected(preset) ? 2 : 1)
+                                                )
+                                        }
+                                        .buttonStyle(.plain)
+                                        .help(preset.name)
+                                    }
+                                }
+                                .padding(.vertical, 2)
+                            }
                         }
                     } else {
                         // White Temperature Slider (Kelvin)

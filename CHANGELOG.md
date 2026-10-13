@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - **Direct SmartThings Cloud REST Integration:** Dedicated cloud REST API communication (`api.smartthings.com/v1`) controlling Philips WiZ A60 smart bulbs via Samsung SmartThings with zero local UDP socket blocking.
   - **Power & Dimming Control:** Remote ON/OFF toggling and `switchLevel` dimming (10% to 100%).
   - **16M RGB Color Tuning:** Full-spectrum RGB color selection with rapid preset swatches, translating RGB to normalized HSV (Hue `0-100`, Saturation `0-100`) via SmartThings `colorControl` capability.
+  - **Native macOS RGB Color Picker:** Interactive system `ColorPicker` with HEX indicator badge placed alongside the preset swatches, granting access to macOS color wheels, spectrum sliders, and eyedropper tools.
   - **Tunable White Temperature (Kelvin):** Continuous Kelvin temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) via SmartThings `colorTemperature` capability.
   - **Quick Scene Presets:** Instant scene presets (Warm White, Daylight, Cozy, Night Light).
   - **Automatic Status Synchronization:** Background status polling (`GET /v1/devices/{deviceId}/status`) keeping power, brightness, color, and temperature in sync without false offline indicators.

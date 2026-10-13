@@ -201,7 +201,6 @@ public final class WizLightService {
     }
 
     public func setRGBColor(for light: WizLightItem, red: Int, green: Int, blue: Int, brightness: Int? = nil) {
-        cancelDebounce(for: light.id)
         let r = max(0, min(255, red))
         let g = max(0, min(255, green))
         let b = max(0, min(255, blue))
@@ -223,11 +222,14 @@ public final class WizLightService {
             "saturation": sat
         ]
 
-        // Send atomic batch command: turns on and applies color in a single HTTP POST
-        sendSmartThingsCommands(deviceId: targetId, commands: [
-            (capability: "switch", command: "on", arguments: []),
-            (capability: "colorControl", command: "setColor", arguments: [colorMap])
-        ])
+        // Debounce by 200ms to allow fluid RGB color picker wheel dragging without API throttling
+        debounce(for: light.id, delay: 0.20) { [weak self] in
+            guard let self = self else { return }
+            self.sendSmartThingsCommands(deviceId: targetId, commands: [
+                (capability: "switch", command: "on", arguments: []),
+                (capability: "colorControl", command: "setColor", arguments: [colorMap])
+            ])
+        }
     }
 
     public func setColorTemperature(for light: WizLightItem, kelvin: Int, brightness: Int? = nil) {
