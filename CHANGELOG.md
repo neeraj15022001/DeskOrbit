@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.0] - 2026-10-13
+
+**Release Date & Time:** 2026-10-13 12:15:00 IST (+05:30)  
+**Target OS:** macOS 14.0+ (Sonoma, Sequoia)  
+**Architectures:** Universal (Apple Silicon & Intel)
+
+### Added
+- **WiZ Connected Smart Lighting Subsystem (`WizLightService.swift`):**
+  - **Philips A60 WiZ Protocol Integration:** Native local network UDP communication on port `38899` (`getPilot`, `setPilot`, `getSystemConfig`) with zero cloud dependencies or lag.
+  - **Samsung SmartThings Cloud Bridge:** Complete cloud REST API integration for environments where local UDP broadcast is isolated:
+    - **Power & Dimming:** Remote ON/OFF power toggling and `switchLevel` dimming (10% to 100%).
+    - **Cloud Color Control:** Full-spectrum RGB color translation to normalized HSV (Hue `0-100`, Saturation `0-100`) sending `setColor` via SmartThings `colorControl` capability.
+    - **Cloud Color Temperature:** Seamless Kelvin tuning (2200K to 6500K) via SmartThings `colorTemperature` capability.
+    - **Quick Scene Presets:** Cloud dispatching for Warm White, Daylight, Cozy, and Night Light presets.
+    - **Intelligent Device Resolution:** Dynamic mapping resolving local bulb identifiers and SmartThings cloud UUIDs.
+  - **Full 16M RGB Color Tuning:** Support for full-spectrum RGB color tuning with quick color palette swatches (Warm Amber, Candlelight, Sunset Orange, Crimson Red, Neon Pink, Cyber Cyan, Emerald Green) and custom color inputs.
+  - **Tunable White Temperature (Kelvin):** Continuous color temperature adjustment from 2200K (Warm Candlelight) to 6500K (Cool Daylight) with quick scene presets (Warm White, Daylight, Cozy, Night Light).
+  - **Network Auto-Discovery & Manual Pairing:** Subnet UDP broadcast scanning (`discoverLights`) alongside manual IP address pairing with persistent local storage in `UserDefaults`.
+  - **Dual Interface Integration:** Interactive smart bulb cards integrated into the Menu Bar popover (`MenuBarView.swift`) and dedicated `Smart Lights` category deck in the full Dashboard (`DashboardView.swift`).
+
+---
+
 ## [1.1.0] - 2026-09-15
 
 **Release Date & Time:** 2026-09-15 13:43:00 IST (+05:30)  

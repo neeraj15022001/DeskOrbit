@@ -10,7 +10,13 @@ public final class DeviceManager: ObservableObject {
     @Published public var bluetoothDevices: [BluetoothItem] = []
     @Published public var storageDevices: [StorageItem] = []
     @Published public var batteryInfo: BatteryPowerInfo = BatteryPowerInfo()
+    @Published public var smartLights: [WizLightItem] = []
+    @Published public var activeLightModes: [String: String] = [:]
     @Published public var isAdvancedPowerView: Bool = false
+    @Published public var isDiscoveringLights: Bool = false
+    @Published public var isShowingAddBulbSheet: Bool = false
+    @Published public var newBulbIPInput: String = ""
+    @Published public var newBulbNameInput: String = ""
 
     @Published public var defaultAudioOutput: AudioItem?
     @Published public var mainDisplay: DisplayItem?
@@ -23,6 +29,7 @@ public final class DeviceManager: ObservableObject {
     public let bluetoothService = BluetoothService()
     public let storageService = StorageService()
     public let batteryService = BatteryPowerService.shared
+    public let wizLightService = WizLightService.shared
 
     private var timer: Timer?
 
@@ -50,6 +57,12 @@ public final class DeviceManager: ObservableObject {
                 self?.batteryInfo = info
             }
         }
+
+        wizLightService.onLightsChanged = { [weak self] lights in
+            DispatchQueue.main.async {
+                self?.smartLights = lights
+            }
+        }
     }
 
     private func startPeriodicCheck() {
@@ -67,6 +80,7 @@ public final class DeviceManager: ObservableObject {
         refreshAudio()
         refreshBluetooth()
         refreshStorage()
+        refreshLights()
     }
 
     public func refreshBattery() {
@@ -104,6 +118,80 @@ public final class DeviceManager: ObservableObject {
         DispatchQueue.main.async {
             self.storageDevices = items
         }
+    }
+
+    public func refreshLights() {
+        smartLights = wizLightService.lights
+        wizLightService.refreshAllLights()
+    }
+
+    // MARK: - Smart Light Controls (Philips WiZ)
+
+    public func toggleLightPower(light: WizLightItem) {
+        let newState = !light.isOn
+        wizLightService.setPower(for: light, isOn: newState)
+        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
+            smartLights[idx].isOn = newState
+        }
+    }
+
+    public func setLightBrightness(light: WizLightItem, brightness: Int) {
+        wizLightService.setBrightness(for: light, brightness: brightness)
+        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
+            smartLights[idx].brightness = brightness
+            smartLights[idx].isOn = true
+        }
+    }
+
+    public func setLightRGBColor(light: WizLightItem, red: Int, green: Int, blue: Int) {
+        wizLightService.setRGBColor(for: light, red: red, green: green, blue: blue)
+        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
+            smartLights[idx].red = red
+            smartLights[idx].green = green
+            smartLights[idx].blue = blue
+            smartLights[idx].colorTemperature = nil
+            smartLights[idx].isOn = true
+        }
+    }
+
+    public func setLightTemperature(light: WizLightItem, kelvin: Int) {
+        wizLightService.setColorTemperature(for: light, kelvin: kelvin)
+        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
+            smartLights[idx].colorTemperature = kelvin
+            smartLights[idx].isOn = true
+        }
+    }
+
+    public func discoverSmartLights() {
+        isDiscoveringLights = true
+        showStatus("Scanning Wi-Fi for WiZ Smart Bulbs...")
+        wizLightService.discoverLights { [weak self] discovered in
+            DispatchQueue.main.async {
+                self?.isDiscoveringLights = false
+                if discovered.isEmpty {
+                    self?.showStatus("No new WiZ bulbs found on broadcast. Try adding IP directly.")
+                } else {
+                    self?.showStatus("Found \(discovered.count) WiZ Smart Bulb(s)!")
+                }
+            }
+        }
+    }
+
+    public func addSmartLightByIP(ip: String, customName: String? = nil) {
+        showStatus("Connecting to WiZ Bulb at \(ip)...")
+        wizLightService.addLight(ip: ip, customName: customName) { [weak self] result in
+            switch result {
+            case .success(let light):
+                self?.showStatus("Connected to \(light.name) (\(light.ip))!")
+            case .failure(let err):
+                self?.showStatus("Error: \(err.localizedDescription)")
+            }
+        }
+    }
+
+    public func removeSmartLight(id: String) {
+        wizLightService.removeLight(id: id)
+        showStatus("Removed smart bulb.")
     }
 
     // MARK: - Display Controls

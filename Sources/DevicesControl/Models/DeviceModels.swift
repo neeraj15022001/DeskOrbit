@@ -3,6 +3,7 @@ import Foundation
 public enum DeviceCategory: String, CaseIterable, Identifiable {
     case all = "All"
     case battery = "Power & Battery"
+    case lights = "Smart Lights"
     case display = "Displays"
     case audio = "Audio"
     case bluetooth = "Bluetooth"
@@ -14,11 +15,55 @@ public enum DeviceCategory: String, CaseIterable, Identifiable {
         switch self {
         case .all: return "square.grid.2x2"
         case .battery: return "bolt.batteryblock.fill"
+        case .lights: return "lightbulb.fill"
         case .display: return "display"
         case .audio: return "speaker.wave.2"
         case .bluetooth: return "dot.radiowaves.left.and.right"
         case .storage: return "externaldrive"
         }
+    }
+}
+
+public struct WizLightItem: Identifiable, Equatable, Codable {
+    public let id: String // MAC address or IP
+    public var ip: String
+    public var name: String
+    public var mac: String
+    public var isOn: Bool
+    public var brightness: Int // 10...100
+    public var red: Int // 0...255
+    public var green: Int // 0...255
+    public var blue: Int // 0...255
+    public var colorTemperature: Int? // 2200...6500 Kelvin (nil if RGB mode)
+    public var smartThingsDeviceId: String?
+    public var isReachable: Bool
+
+    public init(
+        id: String,
+        ip: String,
+        name: String = "Philips WiZ A60 Bulb",
+        mac: String = "",
+        isOn: Bool = true,
+        brightness: Int = 100,
+        red: Int = 255,
+        green: Int = 214,
+        blue: Int = 170,
+        colorTemperature: Int? = 2700,
+        smartThingsDeviceId: String? = nil,
+        isReachable: Bool = true
+    ) {
+        self.id = id
+        self.ip = ip
+        self.name = name
+        self.mac = mac
+        self.isOn = isOn
+        self.brightness = max(10, min(100, brightness))
+        self.red = max(0, min(255, red))
+        self.green = max(0, min(255, green))
+        self.blue = max(0, min(255, blue))
+        self.colorTemperature = colorTemperature
+        self.smartThingsDeviceId = smartThingsDeviceId
+        self.isReachable = isReachable
     }
 }
 

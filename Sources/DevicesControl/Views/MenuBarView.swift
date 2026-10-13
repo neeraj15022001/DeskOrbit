@@ -127,7 +127,52 @@ public struct MenuBarView: View {
                             }
                         }
 
-                        // 2. Audio Control Section
+                        // 2. Smart Lights (Philips WiZ)
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Label("Smart Lights", systemImage: "lightbulb.fill")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Button(action: { manager.discoverSmartLights() }) {
+                                    HStack(spacing: 2) {
+                                        if manager.isDiscoveringLights {
+                                            ProgressView()
+                                                .controlSize(.mini)
+                                        } else {
+                                            Image(systemName: "arrow.clockwise")
+                                            Text("Scan")
+                                        }
+                                    }
+                                    .font(.system(size: 9, weight: .semibold))
+                                }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.accentColor)
+                            }
+
+                            if manager.smartLights.isEmpty {
+                                HStack {
+                                    Text("No WiZ bulbs configured")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Button(action: onOpenDashboard) {
+                                        Text("+ Add IP")
+                                            .font(.system(size: 9, weight: .bold))
+                                    }
+                                    .controlSize(.mini)
+                                }
+                                .padding(8)
+                                .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
+                                .cornerRadius(8)
+                            } else {
+                                ForEach(manager.smartLights) { light in
+                                    WizLightCardView(manager: manager, light: light, isCompact: true)
+                                }
+                            }
+                        }
+
+                        // 3. Audio Control Section
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Label("Audio Output", systemImage: "speaker.wave.2")
@@ -193,7 +238,7 @@ public struct MenuBarView: View {
                             }
                         }
 
-                        // 3. Bluetooth Devices
+                        // 4. Bluetooth Devices
                         VStack(alignment: .leading, spacing: 8) {
                             HStack {
                                 Label("Bluetooth", systemImage: "dot.radiowaves.left.and.right")
@@ -244,7 +289,7 @@ public struct MenuBarView: View {
                             }
                         }
 
-                        // 4. External Storage
+                        // 5. External Storage
                         if !manager.storageDevices.isEmpty {
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack {
