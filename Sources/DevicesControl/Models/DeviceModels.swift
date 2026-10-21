@@ -24,8 +24,14 @@ public enum DeviceCategory: String, CaseIterable, Identifiable {
     }
 }
 
+public enum WizConnectionMode: String, CaseIterable, Codable {
+    case directLocal = "Direct Wi-Fi (LAN)"
+    case smartThings = "SmartThings Cloud"
+    case hybrid = "Hybrid (LAN + Cloud)"
+}
+
 public struct WizLightItem: Identifiable, Equatable, Codable {
-    public let id: String // MAC address or IP
+    public let id: String // MAC address or IP or SmartThings device ID
     public var ip: String
     public var name: String
     public var mac: String
@@ -37,6 +43,34 @@ public struct WizLightItem: Identifiable, Equatable, Codable {
     public var colorTemperature: Int? // 2200...6500 Kelvin (nil if RGB mode)
     public var smartThingsDeviceId: String?
     public var isReachable: Bool
+    public var firmwareVersion: String?
+    public var moduleModel: String?
+
+    public var hasLocalConnection: Bool {
+        return !ip.isEmpty && ip != "SmartThings Cloud" && ip != "Cloud"
+    }
+
+    public var hasCloudConnection: Bool {
+        return smartThingsDeviceId != nil && !smartThingsDeviceId!.isEmpty
+    }
+
+    public var connectionMode: WizConnectionMode {
+        if hasLocalConnection && hasCloudConnection {
+            return .hybrid
+        } else if hasLocalConnection {
+            return .directLocal
+        } else {
+            return .smartThings
+        }
+    }
+
+    public var connectionBadgeIcon: String {
+        switch connectionMode {
+        case .directLocal: return "wifi"
+        case .smartThings: return "cloud.fill"
+        case .hybrid: return "arrow.triangle.2.circlepath"
+        }
+    }
 
     public init(
         id: String,
@@ -50,7 +84,9 @@ public struct WizLightItem: Identifiable, Equatable, Codable {
         blue: Int = 170,
         colorTemperature: Int? = 2700,
         smartThingsDeviceId: String? = nil,
-        isReachable: Bool = true
+        isReachable: Bool = true,
+        firmwareVersion: String? = nil,
+        moduleModel: String? = nil
     ) {
         self.id = id
         self.ip = ip
@@ -64,6 +100,8 @@ public struct WizLightItem: Identifiable, Equatable, Codable {
         self.colorTemperature = colorTemperature
         self.smartThingsDeviceId = smartThingsDeviceId
         self.isReachable = isReachable
+        self.firmwareVersion = firmwareVersion
+        self.moduleModel = moduleModel
     }
 }
 

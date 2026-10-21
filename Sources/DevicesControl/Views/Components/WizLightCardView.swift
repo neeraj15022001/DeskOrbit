@@ -5,9 +5,13 @@ public struct WizLightCardView: View {
     public let light: WizLightItem
     public var isCompact: Bool = false
 
+    @State private var isShowingLinkIPPopover: Bool = false
+    @State private var linkIPInput: String = ""
+
     public init(manager: DeviceManager = .shared, light: WizLightItem, isCompact: Bool = false) {
         self.manager = manager
         self.light = light
+        self.isCompact = isCompact
     }
 
     private var isTemperatureMode: Bool {
@@ -46,9 +50,64 @@ public struct WizLightCardView: View {
                         }
                     }
 
-                    Text("SmartThings Cloud • Philips WiZ A60")
-                        .font(.system(size: isCompact ? 9 : 11, design: .monospaced))
-                        .foregroundColor(.secondary)
+                    // Dynamic Connection Mode Badge & Subtitle
+                    HStack(spacing: 4) {
+                        Image(systemName: light.connectionBadgeIcon)
+                            .font(.system(size: 8))
+                            .foregroundColor(badgeColor)
+
+                        Text(connectionSubtitleText)
+                            .font(.system(size: isCompact ? 9 : 10, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+
+                        if !isCompact && !light.hasLocalConnection {
+                            Button(action: {
+                                isShowingLinkIPPopover = true
+                            }) {
+                                Text("+ Link Local IP")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                            .popover(isPresented: $isShowingLinkIPPopover) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Link Local Wi-Fi IP")
+                                        .font(.system(size: 12, weight: .bold))
+                                    Text("Enter your bulb's LAN IP for instant, zero-latency local control alongside SmartThings.")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+
+                                    TextField("e.g. 192.168.1.50", text: $linkIPInput)
+                                        .textFieldStyle(.roundedBorder)
+                                        .controlSize(.small)
+
+                                    HStack {
+                                        Button("Cancel") {
+                                            isShowingLinkIPPopover = false
+                                        }
+                                        .controlSize(.small)
+
+                                        Spacer()
+
+                                        Button("Link IP") {
+                                            manager.linkLocalIPToBulb(bulbId: light.id, ip: linkIPInput) { success in
+                                                if success {
+                                                    isShowingLinkIPPopover = false
+                                                    linkIPInput = ""
+                                                }
+                                            }
+                                        }
+                                        .buttonStyle(.borderedProminent)
+                                        .controlSize(.small)
+                                        .disabled(linkIPInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                                    }
+                                }
+                                .padding(12)
+                                .frame(width: 250)
+                            }
+                        }
+                    }
                 }
 
                 Spacer()
@@ -66,6 +125,36 @@ public struct WizLightCardView: View {
                 }
                 .buttonStyle(.plain)
                 .help(light.isOn ? "Turn Off" : "Turn On")
+
+                // Option Menu (Remove / Details)
+                if !isCompact {
+                    Menu {
+                        if light.hasLocalConnection {
+                            Text("IP: \(light.ip):38899")
+                        }
+                        if !light.mac.isEmpty {
+                            Text("MAC: \(light.mac)")
+                        }
+                        if let fw = light.firmwareVersion {
+                            Text("Firmware: \(fw)")
+                        }
+                        if light.hasCloudConnection {
+                            Text("SmartThings: Connected")
+                        }
+                        Divider()
+                        Button(role: .destructive, action: {
+                            manager.removeSmartLight(id: light.id)
+                        }) {
+                            Label("Remove Bulb", systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .menuIndicator(.hidden)
+                }
             }
 
             // MARK: - Brightness Slider
@@ -212,11 +301,19 @@ public struct WizLightCardView: View {
 
                     // Quick Scenes Bar (Non-compact only)
                     if !isCompact {
-                        HStack(spacing: 6) {
-                            SceneChip(name: "Warm White", icon: "lamp.table.fill", sceneId: 11, light: light, manager: manager)
-                            SceneChip(name: "Daylight", icon: "sun.max.fill", sceneId: 12, light: light, manager: manager)
-                            SceneChip(name: "Cozy", icon: "flame.fill", sceneId: 6, light: light, manager: manager)
-                            SceneChip(name: "Night Light", icon: "moon.stars.fill", sceneId: 14, light: light, manager: manager)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                SceneChip(name: "Warm White", icon: "lamp.table.fill", sceneId: 11, light: light, manager: manager)
+                                SceneChip(name: "Daylight", icon: "sun.max.fill", sceneId: 12, light: light, manager: manager)
+                                SceneChip(name: "Cozy", icon: "flame.fill", sceneId: 6, light: light, manager: manager)
+                                SceneChip(name: "Night Light", icon: "moon.stars.fill", sceneId: 14, light: light, manager: manager)
+                                if light.hasLocalConnection {
+                                    SceneChip(name: "Fireplace", icon: "fireplace.fill", sceneId: 5, light: light, manager: manager)
+                                    SceneChip(name: "Sunset", icon: "sunset.fill", sceneId: 9, light: light, manager: manager)
+                                    SceneChip(name: "Party", icon: "sparkles", sceneId: 4, light: light, manager: manager)
+                                }
+                            }
+                            .padding(.vertical, 2)
                         }
                     }
                 }
@@ -233,6 +330,28 @@ public struct WizLightCardView: View {
     }
 
     // MARK: - Helpers
+
+    private var connectionSubtitleText: String {
+        switch light.connectionMode {
+        case .hybrid:
+            return "Hybrid: \(light.ip) + SmartThings"
+        case .directLocal:
+            return "Direct Wi-Fi: \(light.ip)"
+        case .smartThings:
+            return "Samsung SmartThings Cloud"
+        }
+    }
+
+    private var badgeColor: Color {
+        switch light.connectionMode {
+        case .hybrid:
+            return .purple
+        case .directLocal:
+            return .green
+        case .smartThings:
+            return .cyan
+        }
+    }
 
     private var bulbGlowColor: Color {
         Color(
@@ -280,7 +399,7 @@ private struct SceneChip: View {
 
     var body: some View {
         Button(action: {
-            manager.wizLightService.setScene(for: light, sceneId: sceneId)
+            manager.setLightScene(light: light, sceneId: sceneId)
         }) {
             HStack(spacing: 3) {
                 Image(systemName: icon)

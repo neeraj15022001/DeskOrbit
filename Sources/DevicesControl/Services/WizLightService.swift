@@ -1,28 +1,38 @@
 import Foundation
+import Darwin
 
-public final class WizLightService {
+public final class WizLightService: @unchecked Sendable {
     public static let shared = WizLightService()
 
+    private let udpPort: in_port_t = 38899
     private let storageKey = "DeskOrbit_Saved_WizLights"
     private let smartThingsTokenKey = "DeskOrbit_SmartThings_Token"
+
     private let workQueue = DispatchQueue(label: "com.deskorbit.smartthings.work", qos: .userInitiated)
+    private let udpQueue = DispatchQueue(label: "com.deskorbit.wizlight.udp", qos: .userInitiated)
 
     public var onLightsChanged: (([WizLightItem]) -> Void)?
 
     @Published public private(set) var lights: [WizLightItem] = []
     @Published public var smartThingsToken: String = ""
+    @Published public var isScanningLocal: Bool = false
+    @Published public var isSyncingCloud: Bool = false
 
     private var pollTimer: Timer?
+    private var sequenceId: Int = 1
     private var debounceWorkItems: [String: DispatchWorkItem] = [:]
+    private var localUdpDebounceItems: [String: DispatchWorkItem] = [:]
 
     public init() {
         self.smartThingsToken = UserDefaults.standard.string(forKey: smartThingsTokenKey) ?? ""
         loadSavedLights()
-        purgeWiFiLights()
         startPeriodicPoll()
+
+        // Background auto-refresh on launch
         if !self.smartThingsToken.isEmpty {
             fetchSmartThingsDevices()
         }
+        discoverLocalLights()
     }
 
     deinit {
@@ -39,30 +49,12 @@ public final class WizLightService {
         }
     }
 
-    // MARK: - Persistence & Wi-Fi Purge
-
-    public func purgeWiFiLights() {
-        // Exclusively keep SmartThings bulbs, permanently removing Wi-Fi UDP discovered instances
-        let filtered = lights.filter { isSmartThingsLight($0) }
-        if filtered.count != lights.count {
-            self.lights = filtered
-            saveLights()
-            onLightsChanged?(self.lights)
-        }
-    }
-
-    private func isSmartThingsLight(_ light: WizLightItem) -> Bool {
-        return light.ip == "SmartThings Cloud" ||
-               (light.id.contains("-") && light.id.count >= 32) ||
-               (light.smartThingsDeviceId != nil && !light.smartThingsDeviceId!.isEmpty)
-    }
+    // MARK: - Persistence
 
     private func loadSavedLights() {
         if let data = UserDefaults.standard.data(forKey: storageKey),
            let saved = try? JSONDecoder().decode([WizLightItem].self, from: data) {
-            // Keep ONLY SmartThings devices
-            self.lights = saved.filter { isSmartThingsLight($0) }
-            saveLights()
+            self.lights = saved
             onLightsChanged?(self.lights)
         }
     }
@@ -78,21 +70,64 @@ public final class WizLightService {
     private func startPeriodicPoll() {
         DispatchQueue.main.async { [weak self] in
             self?.pollTimer?.invalidate()
-            self?.pollTimer = Timer.scheduledTimer(withTimeInterval: 15.0, repeats: true) { [weak self] _ in
+            self?.pollTimer = Timer.scheduledTimer(withTimeInterval: 12.0, repeats: true) { [weak self] _ in
                 self?.refreshAllLights()
             }
         }
     }
 
     public func refreshAllLights() {
-        guard !smartThingsToken.isEmpty, !lights.isEmpty else { return }
+        let currentLights = self.lights
+        guard !currentLights.isEmpty else { return }
 
-        for light in lights {
-            pollDeviceStatus(deviceId: light.id)
+        // 1. Poll SmartThings cloud status
+        if !smartThingsToken.isEmpty {
+            for light in currentLights where light.hasCloudConnection {
+                let targetId = resolveSmartThingsDeviceId(for: light)
+                pollSmartThingsStatus(deviceId: targetId)
+            }
+        }
+
+        // 2. Poll local UDP status for Wi-Fi connected bulbs
+        udpQueue.async { [weak self] in
+            guard let self = self else { return }
+            for light in currentLights where light.hasLocalConnection {
+                if let pilot = self.fetchPilot(ip: light.ip) {
+                    DispatchQueue.main.async {
+                        guard let idx = self.lights.firstIndex(where: { $0.id == light.id }) else { return }
+                        var mod = self.lights[idx]
+                        if let st = pilot.state { mod.isOn = st }
+                        if let dim = pilot.dimming { mod.brightness = dim }
+                        if let temp = pilot.temp {
+                            mod.colorTemperature = temp
+                            let rgb = self.kelvinToRGB(kelvin: temp)
+                            mod.red = rgb.r; mod.green = rgb.g; mod.blue = rgb.b
+                        } else if let r = pilot.r, let g = pilot.g, let b = pilot.b {
+                            mod.red = r; mod.green = g; mod.blue = b
+                            mod.colorTemperature = nil
+                        }
+                        mod.isReachable = true
+                        if mod != self.lights[idx] {
+                            self.lights[idx] = mod
+                            self.saveLights()
+                            self.onLightsChanged?(self.lights)
+                        }
+                    }
+                } else if !light.hasCloudConnection {
+                    // Mark unreachable only if it has no cloud fallback
+                    DispatchQueue.main.async {
+                        if let idx = self.lights.firstIndex(where: { $0.id == light.id }), self.lights[idx].isReachable {
+                            self.lights[idx].isReachable = false
+                            self.saveLights()
+                            self.onLightsChanged?(self.lights)
+                        }
+                    }
+                }
+            }
         }
     }
 
-    private func pollDeviceStatus(deviceId: String) {
+    private func pollSmartThingsStatus(deviceId: String) {
         guard !smartThingsToken.isEmpty,
               let url = URL(string: "https://api.smartthings.com/v1/devices/\(deviceId)/status") else { return }
 
@@ -142,7 +177,7 @@ public final class WizLightService {
             }
 
             DispatchQueue.main.async {
-                guard let idx = self.lights.firstIndex(where: { $0.id == deviceId }) else { return }
+                guard let idx = self.lights.firstIndex(where: { $0.id == deviceId || $0.smartThingsDeviceId == deviceId }) else { return }
                 var modified = self.lights[idx]
                 if let o = isOn { modified.isOn = o }
                 if let b = brightness { modified.brightness = b }
@@ -169,16 +204,217 @@ public final class WizLightService {
         }.resume()
     }
 
-    // MARK: - Light Controls
+    // MARK: - Direct WiZ Local Integration (UDP 38899)
+
+    public func discoverLocalLights(completion: (([WizLightItem]) -> Void)? = nil) {
+        DispatchQueue.main.async { self.isScanningLocal = true }
+
+        udpQueue.async { [weak self] in
+            guard let self = self else { return }
+            let msg = "{\"method\":\"getSystemConfig\",\"params\":{}}"
+            let responses = self.sendUDPBroadcast(message: msg, timeoutSeconds: 2.0)
+
+            var discovered: [WizLightItem] = []
+
+            for (ip, respStr) in responses {
+                if let data = respStr.data(using: .utf8),
+                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                   let result = json["result"] as? [String: Any] {
+                    let mac = (result["mac"] as? String) ?? UUID().uuidString
+                    let module = (result["moduleName"] as? String) ?? "Philips WiZ Bulb"
+                    let fw = result["fwVersion"] as? String
+
+                    self.registerWithBulb(ip: ip)
+                    let pilot = self.fetchPilot(ip: ip)
+
+                    let item = WizLightItem(
+                        id: mac,
+                        ip: ip,
+                        name: module,
+                        mac: mac,
+                        isOn: pilot?.state ?? true,
+                        brightness: pilot?.dimming ?? 100,
+                        red: pilot?.r ?? 255,
+                        green: pilot?.g ?? 214,
+                        blue: pilot?.b ?? 170,
+                        colorTemperature: pilot?.temp ?? 2700,
+                        smartThingsDeviceId: nil,
+                        isReachable: true,
+                        firmwareVersion: fw,
+                        moduleModel: module
+                    )
+                    discovered.append(item)
+                }
+            }
+
+            DispatchQueue.main.async {
+                self.isScanningLocal = false
+                for disc in discovered {
+                    // Check if already in list (by MAC, IP, or matching Cloud bulb)
+                    if let idx = self.lights.firstIndex(where: {
+                        $0.id == disc.id ||
+                        $0.mac.lowercased() == disc.mac.lowercased() ||
+                        $0.ip == disc.ip ||
+                        ($0.name.lowercased() == disc.name.lowercased() && !$0.hasLocalConnection)
+                    }) {
+                        // Merge into existing item: promote to Hybrid if it had SmartThings!
+                        var existing = self.lights[idx]
+                        existing.ip = disc.ip
+                        existing.mac = disc.mac
+                        existing.isReachable = true
+                        if existing.firmwareVersion == nil { existing.firmwareVersion = disc.firmwareVersion }
+                        if existing.moduleModel == nil { existing.moduleModel = disc.moduleModel }
+                        self.lights[idx] = existing
+                    } else {
+                        self.lights.append(disc)
+                    }
+                }
+                self.saveLights()
+                self.onLightsChanged?(self.lights)
+                completion?(discovered)
+            }
+        }
+    }
+
+    public func addDirectLight(ip: String, customName: String? = nil, completion: @escaping (Result<WizLightItem, Error>) -> Void) {
+        let trimmedIP = ip.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedIP.isEmpty else {
+            completion(.failure(NSError(domain: "WizLightService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Please enter a valid IP address."])))
+            return
+        }
+
+        udpQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            self.registerWithBulb(ip: trimmedIP)
+            let sysConfig = self.fetchSystemConfig(ip: trimmedIP)
+            let pilot = self.fetchPilot(ip: trimmedIP)
+
+            if sysConfig == nil && pilot == nil {
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(
+                        domain: "WizLightService",
+                        code: 404,
+                        userInfo: [NSLocalizedDescriptionKey: "Bulb at \(trimmedIP) did not respond over UDP port 38899.\n\nTips:\n1. Ensure Mac and bulb are on the same Wi-Fi.\n2. In the WiZ App, go to Settings → Security & Privacy → Enable 'Local network communication'."]
+                    )))
+                }
+                return
+            }
+
+            let mac = sysConfig?.mac ?? pilot?.mac ?? UUID().uuidString.prefix(12).lowercased()
+            let defaultName = sysConfig?.moduleName ?? "Philips WiZ A60 Bulb"
+            let finalName = (customName?.isEmpty == false) ? customName! : defaultName
+
+            var item = WizLightItem(
+                id: mac,
+                ip: trimmedIP,
+                name: finalName,
+                mac: mac,
+                isOn: pilot?.state ?? true,
+                brightness: pilot?.dimming ?? 100,
+                red: pilot?.r ?? 255,
+                green: pilot?.g ?? 214,
+                blue: pilot?.b ?? 170,
+                colorTemperature: pilot?.temp ?? 2700,
+                smartThingsDeviceId: nil,
+                isReachable: true,
+                firmwareVersion: sysConfig?.fwVersion,
+                moduleModel: sysConfig?.moduleName
+            )
+
+            DispatchQueue.main.async {
+                // If a bulb with matching MAC, IP, or same name exists, merge them!
+                if let idx = self.lights.firstIndex(where: {
+                    $0.id == item.id ||
+                    $0.mac.lowercased() == item.mac.lowercased() ||
+                    $0.ip == item.ip ||
+                    ($0.name.lowercased() == item.name.lowercased() && !$0.hasLocalConnection)
+                }) {
+                    var existing = self.lights[idx]
+                    existing.ip = item.ip
+                    existing.mac = item.mac
+                    existing.isReachable = true
+                    existing.firmwareVersion = item.firmwareVersion
+                    existing.moduleModel = item.moduleModel
+                    if customName?.isEmpty == false { existing.name = customName! }
+                    self.lights[idx] = existing
+                    item = existing
+                } else {
+                    self.lights.append(item)
+                }
+                self.saveLights()
+                self.onLightsChanged?(self.lights)
+                completion(.success(item))
+            }
+        }
+    }
+
+    public func linkLocalIP(bulbId: String, ip: String, completion: @escaping (Result<WizLightItem, Error>) -> Void) {
+        let trimmedIP = ip.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedIP.isEmpty else {
+            completion(.failure(NSError(domain: "WizLightService", code: 400, userInfo: [NSLocalizedDescriptionKey: "Invalid IP address."])))
+            return
+        }
+
+        udpQueue.async { [weak self] in
+            guard let self = self else { return }
+
+            self.registerWithBulb(ip: trimmedIP)
+            let sysConfig = self.fetchSystemConfig(ip: trimmedIP)
+            let pilot = self.fetchPilot(ip: trimmedIP)
+
+            if sysConfig == nil && pilot == nil {
+                DispatchQueue.main.async {
+                    completion(.failure(NSError(domain: "WizLightService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Bulb at \(trimmedIP) did not respond. Check WiZ App → Settings → Local network communication."])))
+                }
+                return
+            }
+
+            DispatchQueue.main.async {
+                guard let idx = self.lights.firstIndex(where: { $0.id == bulbId }) else {
+                    completion(.failure(NSError(domain: "WizLightService", code: 404, userInfo: [NSLocalizedDescriptionKey: "Bulb not found in DeskOrbit."])))
+                    return
+                }
+
+                self.lights[idx].ip = trimmedIP
+                if let m = sysConfig?.mac, !m.isEmpty { self.lights[idx].mac = m }
+                if let fw = sysConfig?.fwVersion { self.lights[idx].firmwareVersion = fw }
+                if let mod = sysConfig?.moduleName { self.lights[idx].moduleModel = mod }
+                self.lights[idx].isReachable = true
+                self.saveLights()
+                self.onLightsChanged?(self.lights)
+                completion(.success(self.lights[idx]))
+            }
+        }
+    }
+
+    public func removeLight(id: String) {
+        cancelDebounce(for: id)
+        lights.removeAll(where: { $0.id == id })
+        saveLights()
+        onLightsChanged?(lights)
+    }
+
+    // MARK: - Dual-Route Light Controls (Direct LAN + SmartThings Cloud)
 
     public func setPower(for light: WizLightItem, isOn: Bool) {
         cancelDebounce(for: light.id)
         updateLocalState(id: light.id) { $0.isOn = isOn }
 
-        let targetId = resolveSmartThingsDeviceId(for: light)
-        sendSmartThingsCommands(deviceId: targetId, commands: [
-            (capability: "switch", command: isOn ? "on" : "off", arguments: [])
-        ])
+        // Route 1: Direct WiZ LAN UDP (instantaneous response)
+        if light.hasLocalConnection {
+            let id = nextId()
+            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":\(isOn)}}"
+            sendLocalUDPCommand(ip: light.ip, payload: payload)
+        }
+
+        // Route 2: Samsung SmartThings Cloud API
+        if light.hasCloudConnection && !smartThingsToken.isEmpty {
+            let targetId = resolveSmartThingsDeviceId(for: light)
+            sendSmartThingsCommands(deviceId: targetId, commands: [
+                (capability: "switch", command: isOn ? "on" : "off", arguments: [])
+            ])
+        }
     }
 
     public func setBrightness(for light: WizLightItem, brightness: Int) {
@@ -188,15 +424,25 @@ public final class WizLightService {
             $0.isOn = true
         }
 
-        let targetId = resolveSmartThingsDeviceId(for: light)
+        // Route 1: Direct WiZ LAN UDP (throttled to 40ms for ultra-smooth slider dragging)
+        if light.hasLocalConnection {
+            let id = nextId()
+            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(clamped)}}"
+            debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
+                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+            }
+        }
 
-        // Debounce by 250ms to prevent slider dragging from flooding the SmartThings API
-        debounce(for: light.id, delay: 0.25) { [weak self] in
-            guard let self = self else { return }
-            self.sendSmartThingsCommands(deviceId: targetId, commands: [
-                (capability: "switch", command: "on", arguments: []),
-                (capability: "switchLevel", command: "setLevel", arguments: [clamped])
-            ])
+        // Route 2: Samsung SmartThings Cloud API (debounced by 250ms to prevent cloud rate-limiting)
+        if light.hasCloudConnection && !smartThingsToken.isEmpty {
+            let targetId = resolveSmartThingsDeviceId(for: light)
+            debounce(for: light.id, delay: 0.25) { [weak self] in
+                guard let self = self else { return }
+                self.sendSmartThingsCommands(deviceId: targetId, commands: [
+                    (capability: "switch", command: "on", arguments: []),
+                    (capability: "switchLevel", command: "setLevel", arguments: [clamped])
+                ])
+            }
         }
     }
 
@@ -215,20 +461,30 @@ public final class WizLightService {
             $0.isOn = true
         }
 
-        let targetId = resolveSmartThingsDeviceId(for: light)
-        let (hue, sat) = rgbToHueSaturation(r: r, g: g, b: b)
-        let colorMap: [String: Any] = [
-            "hue": hue,
-            "saturation": sat
-        ]
+        // Route 1: Direct WiZ LAN UDP
+        if light.hasLocalConnection {
+            let id = nextId()
+            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(dim),\"r\":\(r),\"g\":\(g),\"b\":\(b)}}"
+            debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
+                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+            }
+        }
 
-        // Debounce by 200ms to allow fluid RGB color picker wheel dragging without API throttling
-        debounce(for: light.id, delay: 0.20) { [weak self] in
-            guard let self = self else { return }
-            self.sendSmartThingsCommands(deviceId: targetId, commands: [
-                (capability: "switch", command: "on", arguments: []),
-                (capability: "colorControl", command: "setColor", arguments: [colorMap])
-            ])
+        // Route 2: Samsung SmartThings Cloud API
+        if light.hasCloudConnection && !smartThingsToken.isEmpty {
+            let targetId = resolveSmartThingsDeviceId(for: light)
+            let (hue, sat) = rgbToHueSaturation(r: r, g: g, b: b)
+            let colorMap: [String: Any] = [
+                "hue": hue,
+                "saturation": sat
+            ]
+            debounce(for: light.id, delay: 0.20) { [weak self] in
+                guard let self = self else { return }
+                self.sendSmartThingsCommands(deviceId: targetId, commands: [
+                    (capability: "switch", command: "on", arguments: []),
+                    (capability: "colorControl", command: "setColor", arguments: [colorMap])
+                ])
+            }
         }
     }
 
@@ -246,79 +502,84 @@ public final class WizLightService {
             $0.isOn = true
         }
 
-        let targetId = resolveSmartThingsDeviceId(for: light)
+        // Route 1: Direct WiZ LAN UDP
+        if light.hasLocalConnection {
+            let id = nextId()
+            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(dim),\"temp\":\(clampedKelvin)}}"
+            debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
+                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+            }
+        }
 
-        // Debounce by 250ms for smooth slider dragging without API rate limiting
-        debounce(for: light.id, delay: 0.25) { [weak self] in
-            guard let self = self else { return }
-            self.sendSmartThingsCommands(deviceId: targetId, commands: [
-                (capability: "switch", command: "on", arguments: []),
-                (capability: "colorTemperature", command: "setColorTemperature", arguments: [clampedKelvin])
-            ])
+        // Route 2: Samsung SmartThings Cloud API
+        if light.hasCloudConnection && !smartThingsToken.isEmpty {
+            let targetId = resolveSmartThingsDeviceId(for: light)
+            debounce(for: light.id, delay: 0.25) { [weak self] in
+                guard let self = self else { return }
+                self.sendSmartThingsCommands(deviceId: targetId, commands: [
+                    (capability: "switch", command: "on", arguments: []),
+                    (capability: "colorTemperature", command: "setColorTemperature", arguments: [clampedKelvin])
+                ])
+            }
         }
     }
 
     public func setScene(for light: WizLightItem, sceneId: Int) {
         cancelDebounce(for: light.id)
-        let targetId = resolveSmartThingsDeviceId(for: light)
 
-        var commands: [(capability: String, command: String, arguments: [Any])] = [
-            (capability: "switch", command: "on", arguments: [])
-        ]
-
-        switch sceneId {
-        case 11: // Warm White (2700K)
-            commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2700]))
-            commands.append((capability: "switchLevel", command: "setLevel", arguments: [100]))
-            updateLocalState(id: light.id) {
-                $0.colorTemperature = 2700
-                $0.brightness = 100
-                $0.isOn = true
-                let rgb = self.kelvinToRGB(kelvin: 2700)
-                $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
-            }
-        case 12: // Daylight (5000K)
-            commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [5000]))
-            commands.append((capability: "switchLevel", command: "setLevel", arguments: [100]))
-            updateLocalState(id: light.id) {
-                $0.colorTemperature = 5000
-                $0.brightness = 100
-                $0.isOn = true
-                let rgb = self.kelvinToRGB(kelvin: 5000)
-                $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
-            }
-        case 6: // Cozy (2200K)
-            commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2200]))
-            commands.append((capability: "switchLevel", command: "setLevel", arguments: [80]))
-            updateLocalState(id: light.id) {
-                $0.colorTemperature = 2200
-                $0.brightness = 80
-                $0.isOn = true
-                let rgb = self.kelvinToRGB(kelvin: 2200)
-                $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
-            }
-        case 14: // Night Light (2200K, 10% dim)
-            commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2200]))
-            commands.append((capability: "switchLevel", command: "setLevel", arguments: [10]))
-            updateLocalState(id: light.id) {
-                $0.colorTemperature = 2200
-                $0.brightness = 10
-                $0.isOn = true
-                let rgb = self.kelvinToRGB(kelvin: 2200)
-                $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
-            }
-        default:
-            break
+        // Route 1: Direct WiZ LAN UDP (supports full native scenes: Warm White 11, Daylight 12, Cozy 6, Night Light 14, Fireplace 5, Sunset 9, Party 4)
+        if light.hasLocalConnection {
+            let id = nextId()
+            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"sceneId\":\(sceneId)}}"
+            sendLocalUDPCommand(ip: light.ip, payload: payload)
         }
 
-        sendSmartThingsCommands(deviceId: targetId, commands: commands)
-    }
+        // Route 2: Samsung SmartThings Cloud API
+        if light.hasCloudConnection && !smartThingsToken.isEmpty {
+            let targetId = resolveSmartThingsDeviceId(for: light)
+            var commands: [(capability: String, command: String, arguments: [Any])] = [
+                (capability: "switch", command: "on", arguments: [])
+            ]
 
-    public func removeLight(id: String) {
-        cancelDebounce(for: id)
-        lights.removeAll(where: { $0.id == id })
-        saveLights()
-        onLightsChanged?(lights)
+            switch sceneId {
+            case 11: // Warm White (2700K)
+                commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2700]))
+                commands.append((capability: "switchLevel", command: "setLevel", arguments: [100]))
+            case 12: // Daylight (5000K)
+                commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [5000]))
+                commands.append((capability: "switchLevel", command: "setLevel", arguments: [100]))
+            case 6: // Cozy (2200K)
+                commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2200]))
+                commands.append((capability: "switchLevel", command: "setLevel", arguments: [80]))
+            case 14: // Night Light (2200K, 10% dim)
+                commands.append((capability: "colorTemperature", command: "setColorTemperature", arguments: [2200]))
+                commands.append((capability: "switchLevel", command: "setLevel", arguments: [10]))
+            default:
+                break
+            }
+            sendSmartThingsCommands(deviceId: targetId, commands: commands)
+        }
+
+        // Update local state for common scenes
+        updateLocalState(id: light.id) {
+            $0.isOn = true
+            switch sceneId {
+            case 11:
+                $0.colorTemperature = 2700; $0.brightness = 100
+                let rgb = self.kelvinToRGB(kelvin: 2700); $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
+            case 12:
+                $0.colorTemperature = 5000; $0.brightness = 100
+                let rgb = self.kelvinToRGB(kelvin: 5000); $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
+            case 6:
+                $0.colorTemperature = 2200; $0.brightness = 80
+                let rgb = self.kelvinToRGB(kelvin: 2200); $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
+            case 14:
+                $0.colorTemperature = 2200; $0.brightness = 10
+                let rgb = self.kelvinToRGB(kelvin: 2200); $0.red = rgb.r; $0.green = rgb.g; $0.blue = rgb.b
+            default:
+                break
+            }
+        }
     }
 
     private func updateLocalState(id: String, mutate: (inout WizLightItem) -> Void) {
@@ -329,18 +590,9 @@ public final class WizLightService {
         }
     }
 
-    // MARK: - Debouncing Helper
-
-    private func debounce(for key: String, delay: TimeInterval, action: @escaping () -> Void) {
-        debounceWorkItems[key]?.cancel()
-        let item = DispatchWorkItem(block: action)
-        debounceWorkItems[key] = item
-        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
-    }
-
-    private func cancelDebounce(for key: String) {
-        debounceWorkItems[key]?.cancel()
-        debounceWorkItems.removeValue(forKey: key)
+    private func nextId() -> Int {
+        sequenceId += 1
+        return sequenceId
     }
 
     // MARK: - SmartThings Cloud REST Integration
@@ -352,6 +604,8 @@ public final class WizLightService {
             return
         }
 
+        DispatchQueue.main.async { self.isSyncingCloud = true }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
         request.timeoutInterval = 10.0
@@ -361,7 +615,10 @@ public final class WizLightService {
             guard let self = self, let data = data,
                   let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
                   let items = json["items"] as? [[String: Any]] else {
-                DispatchQueue.main.async { completion?([]) }
+                DispatchQueue.main.async {
+                    self?.isSyncingCloud = false
+                    completion?([])
+                }
                 return
             }
 
@@ -388,8 +645,20 @@ public final class WizLightService {
             }
 
             DispatchQueue.main.async {
-                // Strictly keep only SmartThings lights
-                self.lights = discovered
+                self.isSyncingCloud = false
+                // Intelligently merge: Preserve local Wi-Fi bulbs, upgrading matching ones to Hybrid!
+                for disc in discovered {
+                    if let idx = self.lights.firstIndex(where: {
+                        $0.id == disc.id ||
+                        $0.smartThingsDeviceId == disc.id ||
+                        ($0.name.lowercased() == disc.name.lowercased() && !$0.hasCloudConnection)
+                    }) {
+                        self.lights[idx].smartThingsDeviceId = disc.id
+                        self.lights[idx].isReachable = true
+                    } else {
+                        self.lights.append(disc)
+                    }
+                }
                 self.saveLights()
                 self.onLightsChanged?(self.lights)
                 self.refreshAllLights()
@@ -447,7 +716,242 @@ public final class WizLightService {
         }.resume()
     }
 
-    // Helper: RGB to Hue (0-100) & Saturation (0-100)
+    // MARK: - Low-Level UDP Communications (POSIX Sockets)
+
+    private func sendLocalUDPCommand(ip: String, payload: String) {
+        udpQueue.async { [weak self] in
+            guard let self = self else { return }
+            _ = self.sendUDPUnicast(to: ip, message: payload, timeoutSeconds: 0.5)
+        }
+    }
+
+    private func debounceLocalUDP(for key: String, delay: TimeInterval, action: @escaping () -> Void) {
+        localUdpDebounceItems[key]?.cancel()
+        let item = DispatchWorkItem(block: action)
+        localUdpDebounceItems[key] = item
+        udpQueue.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    private func debounce(for key: String, delay: TimeInterval, action: @escaping () -> Void) {
+        debounceWorkItems[key]?.cancel()
+        let item = DispatchWorkItem(block: action)
+        debounceWorkItems[key] = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: item)
+    }
+
+    private func cancelDebounce(for key: String) {
+        debounceWorkItems[key]?.cancel()
+        debounceWorkItems.removeValue(forKey: key)
+        localUdpDebounceItems[key]?.cancel()
+        localUdpDebounceItems.removeValue(forKey: key)
+    }
+
+    private func registerWithBulb(ip: String) {
+        let reg = "{\"id\":\(nextId()),\"method\":\"registration\",\"params\":{\"register\":true}}"
+        _ = sendUDPUnicast(to: ip, message: reg, timeoutSeconds: 0.5)
+    }
+
+    private struct PilotResult {
+        var state: Bool?
+        var dimming: Int?
+        var r: Int?
+        var g: Int?
+        var b: Int?
+        var temp: Int?
+        var mac: String?
+    }
+
+    private struct SystemConfigResult {
+        var mac: String?
+        var moduleName: String?
+        var fwVersion: String?
+    }
+
+    private func fetchPilot(ip: String) -> PilotResult? {
+        let req = "{\"method\":\"getPilot\",\"params\":{}}"
+        guard let resp = sendUDPUnicast(to: ip, message: req, timeoutSeconds: 0.8),
+              let data = resp.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let res = json["result"] as? [String: Any] else {
+            return nil
+        }
+
+        return PilotResult(
+            state: res["state"] as? Bool,
+            dimming: res["dimming"] as? Int,
+            r: res["r"] as? Int,
+            g: res["g"] as? Int,
+            b: res["b"] as? Int,
+            temp: res["temp"] as? Int,
+            mac: res["mac"] as? String
+        )
+    }
+
+    private func fetchSystemConfig(ip: String) -> SystemConfigResult? {
+        let req = "{\"method\":\"getSystemConfig\",\"params\":{}}"
+        guard let resp = sendUDPUnicast(to: ip, message: req, timeoutSeconds: 0.8),
+              let data = resp.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let res = json["result"] as? [String: Any] else {
+            return nil
+        }
+
+        return SystemConfigResult(
+            mac: res["mac"] as? String,
+            moduleName: res["moduleName"] as? String,
+            fwVersion: res["fwVersion"] as? String
+        )
+    }
+
+    private func sendUDPUnicast(to ip: String, message: String, timeoutSeconds: Double = 0.8) -> String? {
+        let sock = socket(AF_INET, SOCK_DGRAM, 0)
+        guard sock >= 0 else { return nil }
+        defer { close(sock) }
+
+        var tv = timeval(
+            tv_sec: Int(timeoutSeconds),
+            tv_usec: Int32((timeoutSeconds.truncatingRemainder(dividingBy: 1.0)) * 1_000_000)
+        )
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        var addr = sockaddr_in()
+        addr.sin_family = sa_family_t(AF_INET)
+        addr.sin_port = udpPort.bigEndian
+        addr.sin_addr.s_addr = inet_addr(ip)
+
+        let sent = message.withCString { cstr in
+            withUnsafePointer(to: &addr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    sendto(sock, cstr, strlen(cstr), 0, sa, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+        }
+
+        guard sent > 0 else { return nil }
+
+        var buffer = [UInt8](repeating: 0, count: 2048)
+        var srcAddr = sockaddr_in()
+        var srcLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+
+        let received = withUnsafeMutablePointer(to: &srcAddr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                recvfrom(sock, &buffer, buffer.count, 0, sa, &srcLen)
+            }
+        }
+
+        if received > 0 {
+            return String(bytes: buffer[..<received], encoding: .utf8)
+        }
+        return nil
+    }
+
+    private func sendUDPBroadcast(message: String, timeoutSeconds: Double = 1.8) -> [(ip: String, response: String)] {
+        let sock = socket(AF_INET, SOCK_DGRAM, 0)
+        guard sock >= 0 else { return [] }
+        defer { close(sock) }
+
+        var broadcastEnable: Int32 = 1
+        setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcastEnable, socklen_t(MemoryLayout<Int32>.size))
+
+        var tv = timeval(
+            tv_sec: 0,
+            tv_usec: 350_000 // 350ms slice
+        )
+        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+
+        let targets = getBroadcastAddresses()
+
+        for target in targets {
+            var addr = sockaddr_in()
+            addr.sin_family = sa_family_t(AF_INET)
+            addr.sin_port = udpPort.bigEndian
+            addr.sin_addr.s_addr = inet_addr(target)
+
+            _ = message.withCString { cstr in
+                withUnsafePointer(to: &addr) { ptr in
+                    ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                        sendto(sock, cstr, strlen(cstr), 0, sa, socklen_t(MemoryLayout<sockaddr_in>.size))
+                    }
+                }
+            }
+        }
+
+        var results: [(ip: String, response: String)] = []
+        var seenIPs = Set<String>()
+        let startTime = Date()
+
+        while Date().timeIntervalSince(startTime) < timeoutSeconds {
+            var buffer = [UInt8](repeating: 0, count: 2048)
+            var srcAddr = sockaddr_in()
+            var srcLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+
+            let received = withUnsafeMutablePointer(to: &srcAddr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    recvfrom(sock, &buffer, buffer.count, 0, sa, &srcLen)
+                }
+            }
+
+            if received > 0 {
+                let respStr = String(bytes: buffer[..<received], encoding: .utf8) ?? ""
+                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                let nameRes = withUnsafePointer(to: &srcAddr) { ptr in
+                    ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                        getnameinfo(sa, srcLen, &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST)
+                    }
+                }
+                if nameRes == 0 {
+                    let senderIP = String(cString: host)
+                    if !seenIPs.contains(senderIP) {
+                        seenIPs.insert(senderIP)
+                        results.append((ip: senderIP, response: respStr))
+                    }
+                }
+            }
+        }
+
+        return results
+    }
+
+    private func getBroadcastAddresses() -> [String] {
+        var targets = ["255.255.255.255"]
+
+        var ifaddr: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifaddr) == 0, let firstAddr = ifaddr else {
+            return targets
+        }
+        defer { freeifaddrs(ifaddr) }
+
+        var ptr = Optional(firstAddr)
+        while let p = ptr {
+            let flags = Int32(p.pointee.ifa_flags)
+            let isUp = (flags & IFF_UP) != 0
+            let isRunning = (flags & IFF_RUNNING) != 0
+            let isBroadcast = (flags & IFF_BROADCAST) != 0
+            let isLoopback = (flags & IFF_LOOPBACK) != 0
+
+            if isUp && isRunning && isBroadcast && !isLoopback,
+               let addr = p.pointee.ifa_dstaddr,
+               addr.pointee.sa_family == sa_family_t(AF_INET) {
+                var host = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+                let sockLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+                let res = addr.withMemoryRebound(to: sockaddr.self, capacity: 1) { saPtr in
+                    getnameinfo(saPtr, sockLen, &host, socklen_t(host.count), nil, 0, NI_NUMERICHOST)
+                }
+                if res == 0 {
+                    let str = String(cString: host)
+                    if !targets.contains(str) {
+                        targets.append(str)
+                    }
+                }
+            }
+            ptr = p.pointee.ifa_next
+        }
+
+        return targets
+    }
+
+    // MARK: - Color Conversion Helpers
+
     public func rgbToHueSaturation(r: Int, g: Int, b: Int) -> (hue: Double, saturation: Double) {
         let rf = Double(r) / 255.0
         let gf = Double(g) / 255.0
@@ -478,7 +982,6 @@ public final class WizLightService {
         return (round(huePercent * 10.0) / 10.0, round(satPercent * 10.0) / 10.0)
     }
 
-    // Helper: Hue (0-100) & Saturation (0-100) to RGB
     public func hueSaturationToRGB(huePercent: Double, satPercent: Double) -> (r: Int, g: Int, b: Int) {
         let h = (huePercent / 100.0) * 360.0
         let s = satPercent / 100.0
@@ -510,7 +1013,6 @@ public final class WizLightService {
         )
     }
 
-    // Helper: Approximate Kelvin to RGB for visual SwiftUI preview
     public func kelvinToRGB(kelvin: Int) -> (r: Int, g: Int, b: Int) {
         let temp = Double(kelvin) / 100.0
         var r: Double

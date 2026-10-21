@@ -162,8 +162,69 @@ public final class DeviceManager: ObservableObject {
         }
     }
 
+    public func setLightScene(light: WizLightItem, sceneId: Int) {
+        wizLightService.setScene(for: light, sceneId: sceneId)
+    }
+
     public func discoverSmartLights() {
-        syncSmartThings()
+        syncAllSmartLights()
+    }
+
+    public func syncAllSmartLights() {
+        scanLocalWiZLights()
+        if !wizLightService.smartThingsToken.isEmpty {
+            syncSmartThings()
+        }
+    }
+
+    public func scanLocalWiZLights() {
+        isDiscoveringLights = true
+        showStatus("Scanning local Wi-Fi for WiZ bulbs (UDP 38899)...")
+        wizLightService.discoverLocalLights { [weak self] discovered in
+            DispatchQueue.main.async {
+                self?.isDiscoveringLights = false
+                if discovered.isEmpty {
+                    self?.showStatus("No WiZ bulbs responded to broadcast. You can add your bulb by IP!")
+                } else {
+                    self?.showStatus("Found \(discovered.count) WiZ bulb(s) on local Wi-Fi!")
+                }
+            }
+        }
+    }
+
+    public func addDirectBulbByIP(ip: String, customName: String? = nil, completion: ((Bool) -> Void)? = nil) {
+        showStatus("Connecting to WiZ bulb at \(ip)...")
+        wizLightService.addDirectLight(ip: ip, customName: customName) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let bulb):
+                    self?.showStatus("Successfully added \(bulb.name) (\(bulb.ip))!")
+                    self?.isShowingAddBulbSheet = false
+                    self?.newBulbIPInput = ""
+                    self?.newBulbNameInput = ""
+                    completion?(true)
+                case .failure(let error):
+                    self?.showStatus("Error: \(error.localizedDescription)")
+                    completion?(false)
+                }
+            }
+        }
+    }
+
+    public func linkLocalIPToBulb(bulbId: String, ip: String, completion: ((Bool) -> Void)? = nil) {
+        showStatus("Linking local IP \(ip)...")
+        wizLightService.linkLocalIP(bulbId: bulbId, ip: ip) { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let bulb):
+                    self?.showStatus("Linked \(bulb.name) to \(bulb.ip) (Hybrid LAN + Cloud)!")
+                    completion?(true)
+                case .failure(let error):
+                    self?.showStatus("Failed to link IP: \(error.localizedDescription)")
+                    completion?(false)
+                }
+            }
+        }
     }
 
     public func syncSmartThings() {
@@ -173,7 +234,7 @@ public final class DeviceManager: ObservableObject {
             DispatchQueue.main.async {
                 self?.isDiscoveringLights = false
                 if discovered.isEmpty {
-                    self?.showStatus("No bulbs found. Verify your SmartThings token.")
+                    self?.showStatus("No bulbs found in SmartThings. Verify token.")
                 } else {
                     self?.showStatus("Synced \(discovered.count) bulb(s) from SmartThings!")
                 }

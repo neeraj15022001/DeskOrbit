@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.3.0] - 2026-10-21
+
+**Release Date & Time:** 2026-10-21 21:30:00 IST (+05:30)  
+**Target OS:** macOS 14.0+ (Sonoma, Sequoia)  
+**Architectures:** Universal (Apple Silicon & Intel)
+
+### Added
+- **Direct WiZ Third-Party Local LAN Integration (`WizLightService.swift`):**
+  - **Local UDP Protocol (Port 38899):** Direct, zero-latency (<10ms) communication with WiZ smart bulbs over local Wi-Fi without requiring cloud round-trips or internet access.
+  - **Auto-Discovery via Subnet Broadcast:** Dynamically queries Darwin network interfaces (`getifaddrs`) to determine active IPv4 subnet broadcast addresses, discovering responding WiZ bulbs and registering push controller subscriptions.
+  - **Add Bulb by Local IP:** Dedicated modal sheet allowing manual IP addition (e.g. `192.168.1.x`) and custom naming for complex mesh or dual-band networks.
+  - **Native WiZ Dynamic Scenes:** Full local support for built-in WiZ scenes (Fireplace, Sunset, Party) alongside static presets (Warm White, Daylight, Cozy, Night Light).
+- **Hybrid Dual-Route Architecture (Local LAN + SmartThings Cloud):**
+  - **Intelligent Pairing & Deduplication:** When a WiZ bulb is connected via the WiZ app's Samsung SmartThings integration and also present on the local Wi-Fi, DeskOrbit unifies them into a **Hybrid (LAN + Cloud)** device.
+  - **Instant Local Execution with Cloud Sync:** Commands (power, brightness, RGB color, color temperature, scenes) fire immediately over UDP for flicker-free local response, and automatically update Samsung SmartThings Cloud in the background.
+  - **Link Local IP Tool:** Single-click popover on SmartThings cloud bulbs enabling users to attach a local LAN IP for instant local control upgrade.
+- **Third-Party Integration Setup Guide Sheet (`DashboardView.swift`):**
+  - Interactive modal guide detailing setup for both WiZ app Third-Party Integrations:
+    1. *Samsung SmartThings Cloud Integration* via WiZ app pairing code.
+    2. *Local Network Communication* via WiZ app Security & Privacy settings.
+    3. *Hybrid Operation* benefits and verification tips.
+- **Connection Badges & Diagnostics:**
+  - Real-time connection badges (`Direct Wi-Fi (LAN)`, `SmartThings Cloud`, `Hybrid (LAN + Cloud)`) with detailed telemetry popovers (IP, MAC, firmware version, module model).
+
+---
+
 ## [1.2.0] - 2026-10-13
 
 **Release Date & Time:** 2026-10-13 12:15:00 IST (+05:30)  

@@ -2,6 +2,7 @@ import SwiftUI
 
 public struct DashboardView: View {
     @ObservedObject var manager: DeviceManager
+    @State private var isShowingIntegrationGuide: Bool = false
 
     public init(manager: DeviceManager = .shared) {
         self.manager = manager
@@ -36,7 +37,7 @@ public struct DashboardView: View {
         } detail: {
             VStack(spacing: 0) {
                 // Top Header / Action Bar
-                HStack {
+                HStack(spacing: 10) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(manager.activeCategory.rawValue)
                             .font(.system(size: 22, weight: .bold))
@@ -50,26 +51,51 @@ public struct DashboardView: View {
                     if let status = manager.statusMessage {
                         Text(status)
                             .font(.system(size: 12))
-                            .foregroundColor(.blue)
+                            .foregroundColor(.accentColor)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 4)
-                            .background(Color.blue.opacity(0.1))
+                            .background(Color.accentColor.opacity(0.1))
                             .cornerRadius(8)
                     }
 
                     // Smart Bulb Actions
                     if manager.activeCategory == .all || manager.activeCategory == .lights {
-                        Button(action: { manager.syncSmartThings() }) {
-                            HStack(spacing: 4) {
-                                if manager.isDiscoveringLights {
-                                    ProgressView().controlSize(.mini)
-                                } else {
-                                    Image(systemName: "arrow.triangle.2.circlepath")
+                        HStack(spacing: 8) {
+                            Button(action: { manager.scanLocalWiZLights() }) {
+                                HStack(spacing: 4) {
+                                    if manager.wizLightService.isScanningLocal {
+                                        ProgressView().controlSize(.mini)
+                                    } else {
+                                        Image(systemName: "wifi")
+                                    }
+                                    Text("Scan Local Wi-Fi")
                                 }
-                                Text("Sync SmartThings")
                             }
+                            .controlSize(.regular)
+                            .help("Scan local network for WiZ bulbs on UDP port 38899")
+
+                            Button(action: { manager.isShowingAddBulbSheet = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "plus.circle")
+                                    Text("Add by IP")
+                                }
+                            }
+                            .controlSize(.regular)
+                            .help("Add a WiZ bulb directly by its local IP address")
+
+                            Button(action: { manager.syncSmartThings() }) {
+                                HStack(spacing: 4) {
+                                    if manager.wizLightService.isSyncingCloud {
+                                        ProgressView().controlSize(.mini)
+                                    } else {
+                                        Image(systemName: "cloud.fill")
+                                    }
+                                    Text("Sync SmartThings")
+                                }
+                            }
+                            .controlSize(.regular)
+                            .help("Sync devices linked to your Samsung SmartThings account")
                         }
-                        .controlSize(.regular)
                     }
 
                     Button(action: { manager.refreshAll() }) {
@@ -81,40 +107,75 @@ public struct DashboardView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 12)
 
-                // SmartThings Cloud Integration Banner
+                // Unified Dual Integration Banner (Direct WiZ LAN + Samsung SmartThings Cloud)
                 if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {
                     HStack(spacing: 12) {
-                        Image(systemName: "cloud.fill")
-                            .font(.system(size: 14))
-                            .foregroundColor(.cyan)
+                        ZStack {
+                            Circle()
+                                .fill(Color.accentColor.opacity(0.15))
+                                .frame(width: 32, height: 32)
+                            Image(systemName: "lightbulb.2.fill")
+                                .font(.system(size: 14))
+                                .foregroundColor(.accentColor)
+                        }
 
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Samsung SmartThings Cloud Integration")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundColor(.primary)
-                            Text("DeskOrbit connects to Samsung SmartThings Cloud REST API to control your Philips WiZ A60 bulb.")
+                            HStack(spacing: 6) {
+                                Text("Dual WiZ Integration Supported")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundColor(.primary)
+
+                                Text("Direct LAN (UDP)")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Color.green.opacity(0.18))
+                                    .foregroundColor(.green)
+                                    .cornerRadius(4)
+
+                                Text("SmartThings Cloud")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Color.cyan.opacity(0.18))
+                                    .foregroundColor(.cyan)
+                                    .cornerRadius(4)
+                            }
+
+                            Text("DeskOrbit communicates directly over local Wi-Fi (UDP 38899) and connects to Samsung SmartThings Cloud.")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
 
-                        SecureField("Paste SmartThings PAT Token", text: Binding(
+                        SecureField("SmartThings PAT Token", text: Binding(
                             get: { manager.wizLightService.smartThingsToken },
                             set: { manager.wizLightService.setSmartThingsToken($0) }
                         ))
                         .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 240)
+                        .frame(maxWidth: 220)
                         .controlSize(.small)
 
                         if let url = URL(string: "https://account.smartthings.com/tokens") {
                             Link("Get Token ↗", destination: url)
                                 .font(.system(size: 11))
                         }
+
+                        Button(action: {
+                            isShowingIntegrationGuide = true
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "book.fill")
+                                Text("Setup Guide")
+                            }
+                            .font(.system(size: 10, weight: .semibold))
+                        }
+                        .controlSize(.small)
                     }
                     .padding(.horizontal, 24)
                     .padding(.vertical, 10)
-                    .background(Color.cyan.opacity(0.08))
+                    .background(Color.accentColor.opacity(0.06))
                 }
 
                 Divider()
@@ -151,6 +212,13 @@ public struct DashboardView: View {
             .background(Color(NSColor.windowBackgroundColor))
         }
         .frame(minWidth: 840, minHeight: 560)
+        // MARK: - Sheets
+        .sheet(isPresented: $manager.isShowingAddBulbSheet) {
+            AddBulbSheetView(manager: manager)
+        }
+        .sheet(isPresented: $isShowingIntegrationGuide) {
+            WizIntegrationGuideSheetView(isPresented: $isShowingIntegrationGuide)
+        }
     }
 
     // MARK: - Sections
@@ -166,27 +234,44 @@ public struct DashboardView: View {
     private var lightsSection: some View {
         if manager.smartLights.isEmpty {
             if manager.activeCategory == .lights {
-                VStack(spacing: 12) {
+                VStack(spacing: 16) {
                     Image(systemName: "lightbulb.fill")
-                        .font(.system(size: 36))
-                        .foregroundColor(.yellow.opacity(0.8))
+                        .font(.system(size: 40))
+                        .foregroundColor(.yellow.opacity(0.85))
 
                     Text("No WiZ Smart Bulbs Found")
                         .font(.system(size: 16, weight: .bold))
 
-                    Text("DeskOrbit connects directly to your Samsung SmartThings account to control your Philips WiZ A60 bulb.\n\nPaste your Personal Access Token above and click 'Sync SmartThings' to load your lights.")
+                    Text("DeskOrbit supports two ways to connect your WiZ smart bulbs:\n\n1. **Direct Wi-Fi (LAN):** Fast local communication over UDP 38899 without cloud delay.\n2. **Samsung SmartThings Cloud:** Connected via the WiZ app's third-party integration.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
+                        .frame(maxWidth: 480)
 
                     HStack(spacing: 12) {
-                        Button("Sync SmartThings") {
-                            manager.syncSmartThings()
+                        Button(action: { manager.scanLocalWiZLights() }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "wifi")
+                                Text("Scan Local Wi-Fi")
+                            }
                         }
                         .buttonStyle(.borderedProminent)
+
+                        Button(action: { manager.isShowingAddBulbSheet = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "plus.circle")
+                                Text("Add by IP")
+                            }
+                        }
+
+                        Button(action: { isShowingIntegrationGuide = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "book")
+                                Text("Setup Guide")
+                            }
+                        }
                     }
-                    .padding(.top, 4)
+                    .padding(.top, 6)
                 }
                 .padding(32)
                 .frame(maxWidth: .infinity)
@@ -314,26 +399,32 @@ public struct DashboardView: View {
 
     @ViewBuilder
     private var storageSection: some View {
-        ForEach(manager.storageDevices) { storage in
+        ForEach(manager.storageDevices) { device in
             DeviceCardView(
-                title: storage.name,
-                subtitle: "\(storage.formattedFree) free of \(storage.formattedTotal)",
-                iconName: "externaldrive.fill",
+                title: device.name,
+                subtitle: device.isRemovable ? "Removable Volume" : "External Volume",
+                iconName: "externaldrive",
                 iconColor: .orange,
-                badgeText: storage.isEjectable ? "Removable" : nil,
+                badgeText: device.isEjectable ? "Ejectable" : nil,
                 badgeColor: .orange
             ) {
                 VStack(spacing: 8) {
-                    ProgressView(value: storage.usedPercentage)
-                        .progressViewStyle(.linear)
-
                     HStack {
-                        Text("\(Int(storage.usedPercentage * 100))% used")
+                        Text("\(device.formattedFree) free of \(device.formattedTotal)")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                         Spacer()
-                        if storage.isEjectable {
-                            Button(action: { manager.ejectStorage(device: storage) }) {
+                        Text("\(Int(device.usedPercentage * 100))% used")
+                            .font(.system(size: 11, weight: .medium, design: .monospaced))
+                    }
+
+                    ProgressView(value: device.usedPercentage)
+                        .tint(device.usedPercentage > 0.9 ? .red : .accentColor)
+
+                    HStack {
+                        Spacer()
+                        if device.isEjectable {
+                            Button(action: { manager.ejectStorage(device: device) }) {
                                 Label("Eject", systemImage: "eject.fill")
                             }
                             .controlSize(.small)
@@ -369,5 +460,208 @@ public struct DashboardView: View {
         let storage = manager.storageDevices.count
         let batt = manager.batteryInfo.isInstalled ? "\(manager.batteryInfo.currentPercentage)% Battery" : "AC Connected"
         return "\(batt), \(lights) light\(lights == 1 ? "" : "s"), \(displays) display\(displays == 1 ? "" : "s"), \(audio) audio, \(btConnected) bluetooth active, \(storage) storage"
+    }
+}
+
+// MARK: - Add Bulb Modal Sheet
+private struct AddBulbSheetView: View {
+    @ObservedObject var manager: DeviceManager
+    @State private var isTesting: Bool = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "wifi")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Add WiZ Bulb by IP Address")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Direct Wi-Fi Local Integration (UDP 38899)")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Cancel") {
+                    manager.isShowingAddBulbSheet = false
+                }
+                .controlSize(.small)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Bulb Local IP Address:")
+                    .font(.system(size: 11, weight: .semibold))
+
+                TextField("e.g. 192.168.1.45", text: $manager.newBulbIPInput)
+                    .textFieldStyle(.roundedBorder)
+
+                Text("Custom Name (Optional):")
+                    .font(.system(size: 11, weight: .semibold))
+
+                TextField("e.g. Desk Lamp", text: $manager.newBulbNameInput)
+                    .textFieldStyle(.roundedBorder)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 4) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.secondary)
+                    Text("Setup Note:")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
+                Text("Ensure your WiZ bulb is connected to the same Wi-Fi network as this Mac. In the WiZ App, make sure 'Local network communication' is enabled under Settings.")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .padding(8)
+            .background(Color.primary.opacity(0.04))
+            .cornerRadius(8)
+
+            HStack {
+                Button("Auto-Scan Subnet") {
+                    manager.scanLocalWiZLights()
+                }
+                .controlSize(.regular)
+
+                Spacer()
+
+                Button(action: {
+                    isTesting = true
+                    manager.addDirectBulbByIP(ip: manager.newBulbIPInput, customName: manager.newBulbNameInput.isEmpty ? nil : manager.newBulbNameInput) { _ in
+                        isTesting = false
+                    }
+                }) {
+                    HStack(spacing: 4) {
+                        if isTesting {
+                            ProgressView().controlSize(.mini)
+                        } else {
+                            Image(systemName: "plus")
+                        }
+                        Text("Connect & Add")
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+                .disabled(manager.newBulbIPInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || isTesting)
+            }
+        }
+        .padding(20)
+        .frame(width: 440)
+    }
+}
+
+// MARK: - Integration Guide Modal Sheet
+private struct WizIntegrationGuideSheetView: View {
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.accentColor.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "book.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.accentColor)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("WiZ Third-Party Integration Guide")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("How to connect your bulbs via SmartThings and Direct Wi-Fi LAN")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Done") {
+                    isPresented = false
+                }
+                .controlSize(.small)
+            }
+
+            Divider()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    // Method 1
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "cloud.fill")
+                                .foregroundColor(.cyan)
+                            Text("Method 1: Samsung SmartThings Cloud Integration")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("1. Open the **WiZ App** on your phone → Tap **Settings** (gear) → **Integrations**.")
+                            Text("2. Tap **SmartThings** and toggle it on. A 5-minute pairing code will appear.")
+                            Text("3. Open the **SmartThings App** → Tap **+ (Add Device)** → Search **WiZ** → Select your bulb type and paste the pairing code.")
+                            Text("4. In DeskOrbit, paste your **SmartThings Personal Access Token** in the header banner and click **Sync SmartThings**.")
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .background(Color.cyan.opacity(0.08))
+                        .cornerRadius(8)
+                    }
+
+                    // Method 2
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "wifi")
+                                .foregroundColor(.green)
+                            Text("Method 2: Direct WiZ Local Integration (LAN UDP)")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("1. In the **WiZ App**, go to **Settings** → **Security & Privacy** (or Integrations).")
+                            Text("2. Enable **'Local network communication'** (or set to 'All Controls').")
+                            Text("3. In DeskOrbit, click **'Scan Local Wi-Fi'** or **'Add by IP'** to immediately control your bulb over UDP 38899.")
+                            Text("4. Enjoy ultra-fast <10ms response times without internet or cloud round-trips.")
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .background(Color.green.opacity(0.08))
+                        .cornerRadius(8)
+                    }
+
+                    // Hybrid
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .foregroundColor(.purple)
+                            Text("Hybrid Dual-Route (Best of Both Worlds)")
+                                .font(.system(size: 12, weight: .bold))
+                        }
+
+                        Text("When a bulb is both on your local Wi-Fi and linked to SmartThings, DeskOrbit automatically operates in **Hybrid mode**:\n• Commands are sent locally over Wi-Fi for instantaneous, flicker-free dimming and color tuning.\n• State updates are synchronized with Samsung SmartThings Cloud so your mobile app and smart home automations stay perfectly in sync!")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .padding(10)
+                            .background(Color.purple.opacity(0.08))
+                            .cornerRadius(8)
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+        .padding(20)
+        .frame(width: 520, height: 460)
     }
 }

@@ -134,20 +134,37 @@ public struct MenuBarView: View {
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Button(action: { manager.discoverSmartLights() }) {
-                                    HStack(spacing: 2) {
-                                        if manager.isDiscoveringLights {
-                                            ProgressView()
-                                                .controlSize(.mini)
-                                        } else {
-                                            Image(systemName: "arrow.clockwise")
-                                            Text("Sync")
+                                HStack(spacing: 6) {
+                                    Button(action: { manager.scanLocalWiZLights() }) {
+                                        HStack(spacing: 2) {
+                                            if manager.wizLightService.isScanningLocal {
+                                                ProgressView().controlSize(.mini)
+                                            } else {
+                                                Image(systemName: "wifi")
+                                            }
+                                            Text("LAN")
                                         }
+                                        .font(.system(size: 9, weight: .semibold))
                                     }
-                                    .font(.system(size: 9, weight: .semibold))
+                                    .buttonStyle(.plain)
+                                    .foregroundColor(.green)
+                                    .help("Scan Local Wi-Fi (UDP 38899)")
+
+                                    Button(action: { manager.syncSmartThings() }) {
+                                        HStack(spacing: 2) {
+                                            if manager.wizLightService.isSyncingCloud {
+                                                ProgressView().controlSize(.mini)
+                                            } else {
+                                                Image(systemName: "cloud.fill")
+                                            }
+                                            Text("Cloud")
+                                        }
+                                        .font(.system(size: 9, weight: .semibold))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .foregroundColor(.cyan)
+                                    .help("Sync Samsung SmartThings Cloud")
                                 }
-                                .buttonStyle(.plain)
-                                .foregroundColor(.accentColor)
                             }
 
                             if manager.smartLights.isEmpty {
