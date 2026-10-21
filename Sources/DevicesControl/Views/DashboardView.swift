@@ -91,19 +91,6 @@ public struct DashboardView: View {
                             }
                             .controlSize(.regular)
                             .help("Import WiZ v2 Home config JSON export (unlocks verified UDP controls)")
-
-                            Button(action: { manager.syncSmartThings() }) {
-                                HStack(spacing: 4) {
-                                    if manager.wizLightService.isSyncingCloud {
-                                        ProgressView().controlSize(.mini)
-                                    } else {
-                                        Image(systemName: "cloud.fill")
-                                    }
-                                    Text("Sync SmartThings")
-                                }
-                            }
-                            .controlSize(.regular)
-                            .help("Sync devices linked to your Samsung SmartThings account")
                         }
                     }
 
@@ -116,25 +103,25 @@ public struct DashboardView: View {
                 .padding(.top, 20)
                 .padding(.bottom, 12)
 
-                // Unified Dual Integration Banner (Direct WiZ LAN + Samsung SmartThings Cloud)
+                // WiZ v2 Local Control Hub Banner
                 if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {
                     HStack(spacing: 12) {
                         ZStack {
                             Circle()
                                 .fill(Color.accentColor.opacity(0.15))
                                 .frame(width: 32, height: 32)
-                            Image(systemName: "lightbulb.2.fill")
+                            Image(systemName: "lightbulb.fill")
                                 .font(.system(size: 14))
                                 .foregroundColor(.accentColor)
                         }
 
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 6) {
-                                Text("Dual WiZ Integration Supported")
+                                Text("WiZ Local Control Hub")
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.primary)
 
-                                Text("Direct LAN (UDP)")
+                                Text("Direct LAN (UDP 38899)")
                                     .font(.system(size: 8, weight: .bold))
                                     .padding(.horizontal, 5)
                                     .padding(.vertical, 1)
@@ -142,18 +129,10 @@ public struct DashboardView: View {
                                     .foregroundColor(.green)
                                     .cornerRadius(4)
 
-                                Text("SmartThings Cloud")
-                                    .font(.system(size: 8, weight: .bold))
-                                    .padding(.horizontal, 5)
-                                    .padding(.vertical, 1)
-                                    .background(Color.cyan.opacity(0.18))
-                                    .foregroundColor(.cyan)
-                                    .cornerRadius(4)
-
                                 if let hid = manager.wizLightService.homeId {
                                     HStack(spacing: 3) {
                                         Image(systemName: "lock.shield.fill")
-                                        Text("v2 Authenticated (\(hid))")
+                                        Text("v2 Verified (Home #\(hid))")
                                     }
                                     .font(.system(size: 8, weight: .bold))
                                     .padding(.horizontal, 5)
@@ -161,35 +140,42 @@ public struct DashboardView: View {
                                     .background(Color.purple.opacity(0.18))
                                     .foregroundColor(.purple)
                                     .cornerRadius(4)
+                                } else {
+                                    Text("Open UDP Mode")
+                                        .font(.system(size: 8, weight: .bold))
+                                        .padding(.horizontal, 5)
+                                        .padding(.vertical, 1)
+                                        .background(Color.secondary.opacity(0.18))
+                                        .foregroundColor(.secondary)
+                                        .cornerRadius(4)
                                 }
                             }
 
-                            Text("DeskOrbit communicates directly over local Wi-Fi (UDP 38899) with cryptographic HMAC-SHA256 signing and Samsung SmartThings Cloud.")
+                            Text("DeskOrbit controls WiZ bulbs directly over your local Wi-Fi with cryptographic HMAC-SHA256 signing and zero cloud latency.")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
 
-                        SecureField("SmartThings PAT Token", text: Binding(
-                            get: { manager.wizLightService.smartThingsToken },
-                            set: { manager.wizLightService.setSmartThingsToken($0) }
-                        ))
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 200)
-                        .controlSize(.small)
-
-                        if let url = URL(string: "https://account.smartthings.com/tokens") {
-                            Link("Get Token ↗", destination: url)
-                                .font(.system(size: 11))
+                        Button(action: {
+                            manager.wizLightService.autoImportConfigFromDownloads()
+                            manager.showStatus("Checked ~/Downloads for WiZ config!")
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.down.circle")
+                                Text("Auto-Import JSON")
+                            }
                         }
+                        .controlSize(.small)
+                        .help("Auto-detect and import exported WiZ configuration from ~/Downloads")
 
                         Button(action: {
                             isShowingIntegrationGuide = true
                         }) {
                             HStack(spacing: 4) {
                                 Image(systemName: "book.fill")
-                                Text("Setup Guide")
+                                Text("Protocol Guide")
                             }
                             .font(.system(size: 10, weight: .semibold))
                         }
@@ -258,7 +244,7 @@ public struct DashboardView: View {
     @ViewBuilder
     private var lightsSection: some View {
         if manager.smartLights.isEmpty {
-            if manager.activeCategory == .lights {
+            if manager.activeCategory == .lights || manager.activeCategory == .all {
                 VStack(spacing: 16) {
                     Image(systemName: "lightbulb.fill")
                         .font(.system(size: 40))
@@ -267,7 +253,7 @@ public struct DashboardView: View {
                     Text("No WiZ Smart Bulbs Found")
                         .font(.system(size: 16, weight: .bold))
 
-                    Text("DeskOrbit supports two ways to connect your WiZ smart bulbs:\n\n1. **Direct Wi-Fi (LAN):** Fast local communication over UDP 38899 with HMAC-SHA256 authentication.\n2. **Samsung SmartThings Cloud:** Connected via the WiZ app's third-party integration.")
+                    Text("DeskOrbit communicates directly over your local Wi-Fi (UDP 38899) with cryptographic HMAC-SHA256 signing for instant, zero-latency light control without any cloud dependencies.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -696,9 +682,9 @@ private struct WizIntegrationGuideSheetView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("WiZ Third-Party Integration Guide")
+                    Text("WiZ v2 Local Integration Guide")
                         .font(.system(size: 15, weight: .bold))
-                    Text("How to connect your bulbs via SmartThings and Direct Wi-Fi LAN")
+                    Text("Direct UDP Local Network Control (Port 38899)")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                 }
@@ -715,42 +701,41 @@ private struct WizIntegrationGuideSheetView: View {
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    // Method 1
+                    // Step 1: Getting JSON
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Image(systemName: "cloud.fill")
-                                .foregroundColor(.cyan)
-                            Text("Method 1: Samsung SmartThings Cloud Integration")
+                            Image(systemName: "key.fill")
+                                .foregroundColor(.purple)
+                            Text("1. Exporting WiZ v2 Local Integration Config")
                                 .font(.system(size: 12, weight: .bold))
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("1. Open the **WiZ App** on your phone → Tap **Settings** (gear) → **Integrations**.")
-                            Text("2. Tap **SmartThings** and toggle it on. A 5-minute pairing code will appear.")
-                            Text("3. Open the **SmartThings App** → Tap **+ (Add Device)** → Search **WiZ** → Select your bulb type and paste the pairing code.")
-                            Text("4. In DeskOrbit, paste your **SmartThings Personal Access Token** in the header banner and click **Sync SmartThings**.")
+                            Text("1. Open the **WiZ v2 App** on your phone → Tap **Settings** (gear icon) → **Integrations**.")
+                            Text("2. Select **Local Integrations**.")
+                            Text("3. Generate the export download link. Open it in a web browser to download the configuration `.json` file.")
+                            Text("4. In DeskOrbit, click **'Auto-Import JSON'** (or paste the JSON text in Import WiZ JSON).")
                         }
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .padding(10)
-                        .background(Color.cyan.opacity(0.08))
+                        .background(Color.purple.opacity(0.08))
                         .cornerRadius(8)
                     }
 
-                    // Method 2
+                    // Does it expire?
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Image(systemName: "wifi")
+                            Image(systemName: "clock.badge.checkmark.fill")
                                 .foregroundColor(.green)
-                            Text("Method 2: Direct WiZ Local Integration (Signed LAN UDP)")
+                            Text("2. Does the WiZ v2 Integration Expire?")
                                 .font(.system(size: 12, weight: .bold))
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("1. In the **WiZ App**, go to **Settings** → **Integrations** → **Local Integrations**.")
-                            Text("2. Tap the export button to generate the 15-minute download link, and open it to save the `.json` file.")
-                            Text("3. In DeskOrbit, click **'Import WiZ JSON'** (or Auto-Import from Downloads).")
-                            Text("4. DeskOrbit extracts your **Home Security Key** (`udp_signing_key`) and Home ID, automatically finds your bulb's IP address, and signs all local UDP packets via HMAC-SHA256 for zero-lag local control!")
+                            Text("• **The 15-Minute Link:** The download URL generated by the WiZ cloud expires after 15 minutes for safety during file transfer.")
+                            Text("• **The Keys inside the file:** **NEVER EXPIRE**. The `udp_signing_key` and `home_id` inside your JSON file are burned into your bulb's local storage and remain valid indefinitely.")
+                            Text("• They will only change if you physically factory-reset your bulbs or create a completely new home in the WiZ app.")
                         }
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
@@ -759,27 +744,31 @@ private struct WizIntegrationGuideSheetView: View {
                         .cornerRadius(8)
                     }
 
-                    // Hybrid
+                    // Security Options
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Image(systemName: "arrow.triangle.2.circlepath")
-                                .foregroundColor(.purple)
-                            Text("Hybrid Dual-Route (Best of Both Worlds)")
+                            Image(systemName: "shield.lefthalf.filled")
+                                .foregroundColor(.blue)
+                            Text("3. WiZ Security Mode Options")
                                 .font(.system(size: 12, weight: .bold))
                         }
 
-                        Text("When a bulb is both on your local Wi-Fi and linked to SmartThings, DeskOrbit automatically operates in **Hybrid mode**:\n• Commands are sent locally over Wi-Fi with cryptographic HMAC-SHA256 signing for instantaneous, flicker-free dimming and color tuning.\n• State updates are synchronized with Samsung SmartThings Cloud so your mobile app and smart home automations stay perfectly in sync!")
-                            .font(.system(size: 11))
-                            .foregroundColor(.secondary)
-                            .padding(10)
-                            .background(Color.purple.opacity(0.08))
-                            .cornerRadius(8)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("In the WiZ App under **Settings → Security → Local network communication**:")
+                            Text("• **'Only verified controls' (Default/Recommended):** Bulbs reject unsigned UDP packets. DeskOrbit automatically computes HMAC-SHA256 signatures for every command using your imported key.")
+                            Text("• **'All controls':** Bulbs accept unauthenticated UDP packets from any LAN device. DeskOrbit will work with or without a key in this mode.")
+                        }
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                        .padding(10)
+                        .background(Color.blue.opacity(0.08))
+                        .cornerRadius(8)
                     }
                 }
                 .padding(.vertical, 4)
             }
         }
         .padding(20)
-        .frame(width: 520, height: 470)
+        .frame(width: 520, height: 490)
     }
 }

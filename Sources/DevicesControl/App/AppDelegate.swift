@@ -10,11 +10,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     private let manager = DeviceManager.shared
 
     public func applicationDidFinishLaunching(_ notification: Notification) {
-        // Run as accessory (menu bar only, no dock icon by default)
-        NSApp.setActivationPolicy(.accessory)
-
         setupStatusItem()
         setupPopover()
+
+        // Open Dashboard window automatically on launch
+        openDashboardWindow()
+    }
+
+    public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+        openDashboardWindow()
+        return true
     }
 
     private func setupStatusItem() {

@@ -169,14 +169,11 @@ public final class DeviceManager: ObservableObject {
     }
 
     public func discoverSmartLights() {
-        syncAllSmartLights()
+        scanLocalWiZLights()
     }
 
     public func syncAllSmartLights() {
         scanLocalWiZLights()
-        if !wizLightService.smartThingsToken.isEmpty {
-            syncSmartThings()
-        }
     }
 
     public func scanLocalWiZLights() {
@@ -219,26 +216,11 @@ public final class DeviceManager: ObservableObject {
             DispatchQueue.main.async {
                 switch result {
                 case .success(let bulb):
-                    self?.showStatus("Linked \(bulb.name) to \(bulb.ip) (Hybrid LAN + Cloud)!")
+                    self?.showStatus("Linked \(bulb.name) to \(bulb.ip)!")
                     completion?(true)
                 case .failure(let error):
                     self?.showStatus("Failed to link IP: \(error.localizedDescription)")
                     completion?(false)
-                }
-            }
-        }
-    }
-
-    public func syncSmartThings() {
-        isDiscoveringLights = true
-        showStatus("Syncing SmartThings Cloud...")
-        wizLightService.fetchSmartThingsDevices { [weak self] discovered in
-            DispatchQueue.main.async {
-                self?.isDiscoveringLights = false
-                if discovered.isEmpty {
-                    self?.showStatus("No bulbs found in SmartThings. Verify token.")
-                } else {
-                    self?.showStatus("Synced \(discovered.count) bulb(s) from SmartThings!")
                 }
             }
         }

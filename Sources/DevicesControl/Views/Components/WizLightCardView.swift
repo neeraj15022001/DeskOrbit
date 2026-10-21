@@ -65,20 +65,20 @@ public struct WizLightCardView: View {
                             Button(action: {
                                 isShowingLinkIPPopover = true
                             }) {
-                                Text("+ Link Local IP")
+                                Text("+ Set IP")
                                     .font(.system(size: 9, weight: .bold))
                                     .foregroundColor(.accentColor)
                             }
                             .buttonStyle(.plain)
                             .popover(isPresented: $isShowingLinkIPPopover) {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Link Local Wi-Fi IP")
+                                    Text("Set Local Wi-Fi IP")
                                         .font(.system(size: 12, weight: .bold))
-                                    Text("Enter your bulb's LAN IP for instant, zero-latency local control alongside SmartThings.")
+                                    Text("Enter your bulb's LAN IP for direct signed UDP control (port 38899).")
                                         .font(.system(size: 10))
                                         .foregroundColor(.secondary)
 
-                                    TextField("e.g. 192.168.1.50", text: $linkIPInput)
+                                    TextField("e.g. 192.168.1.6", text: $linkIPInput)
                                         .textFieldStyle(.roundedBorder)
                                         .controlSize(.small)
 
@@ -90,7 +90,7 @@ public struct WizLightCardView: View {
 
                                         Spacer()
 
-                                        Button("Link IP") {
+                                        Button("Set IP") {
                                             manager.linkLocalIPToBulb(bulbId: light.id, ip: linkIPInput) { success in
                                                 if success {
                                                     isShowingLinkIPPopover = false
@@ -138,8 +138,8 @@ public struct WizLightCardView: View {
                         if let fw = light.firmwareVersion {
                             Text("Firmware: \(fw)")
                         }
-                        if light.hasCloudConnection {
-                            Text("SmartThings: Connected")
+                        if let mdl = light.moduleModel {
+                            Text("Model: \(mdl)")
                         }
                         Divider()
                         Button(role: .destructive, action: {
@@ -332,25 +332,15 @@ public struct WizLightCardView: View {
     // MARK: - Helpers
 
     private var connectionSubtitleText: String {
-        switch light.connectionMode {
-        case .hybrid:
-            return "Hybrid: \(light.ip) + SmartThings"
-        case .directLocal:
-            return "Direct Wi-Fi: \(light.ip)"
-        case .smartThings:
-            return "Samsung SmartThings Cloud"
+        if light.hasLocalConnection {
+            return "WiZ v2 Local: \(light.ip):38899"
+        } else {
+            return "WiZ v2 Local (Unassigned IP)"
         }
     }
 
     private var badgeColor: Color {
-        switch light.connectionMode {
-        case .hybrid:
-            return .purple
-        case .directLocal:
-            return .green
-        case .smartThings:
-            return .cyan
-        }
+        return .green
     }
 
     private var bulbGlowColor: Color {

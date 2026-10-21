@@ -35,19 +35,23 @@ public struct MenuBarView: View {
                 .help("Refresh Devices")
 
                 Button(action: onOpenDashboard) {
-                    Image(systemName: "rectangle.inset.filled.and.cursorarrow")
-                        .font(.system(size: 11))
+                    HStack(spacing: 3) {
+                        Image(systemName: "macwindow")
+                        Text("Dashboard")
+                    }
+                    .font(.system(size: 10, weight: .semibold))
                 }
-                .buttonStyle(.plain)
-                .help("Open Full Dashboard")
+                .buttonStyle(.bordered)
+                .controlSize(.mini)
+                .help("Open Full DeskOrbit Dashboard Window")
 
                 Button(action: onQuit) {
-                    Image(systemName: "power")
-                        .font(.system(size: 11))
+                    Image(systemName: "xmark.circle")
+                        .font(.system(size: 12))
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
-                .help("Quit Application")
+                .help("Quit DeskOrbit")
             }
             .padding(.horizontal, 14)
             .padding(.top, 12)
@@ -136,34 +140,19 @@ public struct MenuBarView: View {
                                 Spacer()
                                 HStack(spacing: 6) {
                                     Button(action: { manager.scanLocalWiZLights() }) {
-                                        HStack(spacing: 2) {
+                                        HStack(spacing: 3) {
                                             if manager.wizLightService.isScanningLocal {
                                                 ProgressView().controlSize(.mini)
                                             } else {
                                                 Image(systemName: "wifi")
                                             }
-                                            Text("LAN")
+                                            Text("Scan")
                                         }
                                         .font(.system(size: 9, weight: .semibold))
                                     }
                                     .buttonStyle(.plain)
                                     .foregroundColor(.green)
                                     .help("Scan Local Wi-Fi (UDP 38899)")
-
-                                    Button(action: { manager.syncSmartThings() }) {
-                                        HStack(spacing: 2) {
-                                            if manager.wizLightService.isSyncingCloud {
-                                                ProgressView().controlSize(.mini)
-                                            } else {
-                                                Image(systemName: "cloud.fill")
-                                            }
-                                            Text("Cloud")
-                                        }
-                                        .font(.system(size: 9, weight: .semibold))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .foregroundColor(.cyan)
-                                    .help("Sync Samsung SmartThings Cloud")
                                 }
                             }
 
