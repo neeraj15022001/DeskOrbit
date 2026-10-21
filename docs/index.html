@@ -638,7 +638,7 @@
     </div>
     <h1>One Orbit for All Your Mac's<br>Connected Hardware.</h1>
     <p>
-      Control external displays (via Apple Silicon DDC/CI and GPU Gamma), audio routing, Bluetooth devices, and storage drives from a single menu bar popover and smart-home dashboard.
+      Control external displays (Apple Silicon DDC/CI &amp; GPU Gamma), WiZ smart bulbs via signed UDP, audio routing, Bluetooth devices, and storage drives from a single menu bar popover and smart-home dashboard.
     </p>
     <div class="hero-actions">
       <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" style="padding: 14px 28px; font-size: 1.05rem;" target="_blank" rel="noopener">
@@ -741,11 +741,11 @@
       <!-- Feature 0: Smart Lights -->
       <div class="feature-card">
         <div class="feature-icon">💡</div>
-        <h3>WiZ Connected Smart Bulbs</h3>
+        <h3>WiZ v2 Signed UDP Smart Bulbs</h3>
         <p>
-          Local Wi-Fi UDP control for Philips WiZ (A60) smart bulbs with zero cloud latency. Toggle power, smooth dimming, 16M RGB colors, and tunable Kelvin temperatures.
+          Cryptographic HMAC-SHA256 authenticated UDP pilot control on port 38899 with zero cloud roundtrips. Instant &lt;10ms power toggling, dimming, 16M RGB colors, dynamic scenes, and tunable Kelvin white.
         </p>
-        <span class="feature-tag">WiZ UDP 38899 • Philips A60</span>
+        <span class="feature-tag">WiZ v2 Signed UDP 38899 • Zero-Cloud</span>
       </div>
 
       <!-- Feature 1: Battery & Power -->
@@ -842,6 +842,10 @@
         <div class="arch-item">
           <h4>SwiftUI & AppKit</h4>
           <p>Responsive, reactive interface pairing <code>NSStatusItem</code> popovers with floating card grid windows.</p>
+        </div>
+        <div class="arch-item">
+          <h4>POSIX UDP &amp; CommonCrypto</h4>
+          <p>Dispatches HMAC-SHA256 authenticated pilot datagrams to WiZ bulbs via Darwin BSD sockets with dynamic <code>ts</code> counter synchronization.</p>
         </div>
       </div>
     </div>

@@ -580,6 +580,149 @@
 
     <div class="timeline">
 
+      <!-- ENTRY: v1.4.0 WiZ v2 Signed UDP & Zero-Cloud Release -->
+      <div class="timeline-node" data-category="lights devops">
+        <div class="node-marker"></div>
+        <article class="release-card">
+          <div class="release-header">
+            <div class="version-meta">
+              <span class="version-tag">v1.4.0 — WiZ v2 Signed UDP LAN &amp; Zero-Cloud Architecture</span>
+              <span class="pill-status pill-released">Major Security &amp; Protocol Update</span>
+              <a href="https://github.com/neeraj15022001/DeskOrbit/commit/d6409cf" class="commit-badge" target="_blank" rel="noopener">d6409cf</a>
+            </div>
+            <div class="timestamp-box">
+              <span>Released:</span>
+              <strong>2026-10-21 22:45:00 IST (+05:30)</strong>
+            </div>
+          </div>
+
+          <p class="release-summary">
+            Introduced full <strong>WiZ v2 cryptographic HMAC-SHA256 authenticated UDP pilot control</strong> (port 38899) with dynamic timestamp synchronization for modern WiZ bulb firmware (&ge;1.38.0). Completely eliminated all Samsung SmartThings cloud dependencies and tokens for 100% offline, zero-latency local LAN control, aligned Darwin BSD sockets, and enabled automatic Dashboard presentation on launch.
+          </p>
+
+          <!-- Group: Smart Lighting -->
+          <div class="change-group" data-group="lights">
+            <h3 class="change-group-title" style="color: #fbbf24;">💡 WiZ v2 Cryptographic Local LAN Engine &amp; Zero-Cloud</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>HMAC-SHA256 Authenticated UDP Pilots:</strong> Modern WiZ firmware (&ge;1.38.0) rejects legacy unsigned packets; DeskOrbit generates cryptographic SHA-256 HMAC envelopes over sorted JSON payload keys using the bulb's 16-byte home UDP signing key.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Dynamic Timestamp Synchronization:</strong> Tracks and increments the bulb's monotonically increasing 32-bit counter (<code>ts</code>) to prevent replay attack rejections while ensuring instant packet acceptance.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Home Structure Auto-Importer:</strong> Automatically scans <code>~/Downloads</code> or accepts dropped WiZ v2 JSON export files, instantly extracting home IDs, signing keys, and bulb mappings without manual entry.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>100% Zero-Cloud (Purged SmartThings):</strong> Completely removed Samsung SmartThings REST APIs, tokens, rate limits, and network latency. All controls execute entirely over local Wi-Fi.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Darwin BSD Socket Alignment:</strong> Initialized <code>sin_len = UInt8(MemoryLayout&lt;sockaddr_in&gt;.size)</code> on POSIX UDP sockets, resolving silent transmission dropouts on macOS Sonoma and Sequoia.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Group: UI & Lifecycle -->
+          <div class="change-group" data-group="devops">
+            <h3 class="change-group-title title-app">🖥️ Application Lifecycle &amp; UI Polish</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Automatic Dashboard Presentation:</strong> DeskOrbit now automatically opens and focuses the full Home-style Dashboard window on launch.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Dock Reopen Handler:</strong> Implemented <code>applicationShouldHandleReopen:hasVisibleWindows:</code> to restore the Dashboard window when clicking the Dock icon.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Menu Bar Header Controls:</strong> Replaced ambiguous power button with an explicit Dashboard Window launcher and Quit option.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Persistent Diagnostic Logging:</strong> Added socket and HMAC tracing to <code>/tmp/deskorbit.log</code> for instant local diagnostics.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Micro-Audit Log -->
+          <div class="audit-box">
+            <div class="audit-title">Timestamped Actions</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-10-21 22:45:00 IST</span>
+              <span class="audit-desc">Complete removal of SmartThings, added Darwin sin_len socket alignment, auto-presentation of Dashboard (commit d6409cf)</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-10-21 22:04:00 IST</span>
+              <span class="audit-desc">Implemented HMAC-SHA256 envelope signing, ts counter sync, and homeStructure JSON auto-import (commit aabb190)</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <!-- ENTRY: v1.3.0 Direct WiZ LAN Subsystem Release -->
+      <div class="timeline-node" data-category="lights devops">
+        <div class="node-marker"></div>
+        <article class="release-card">
+          <div class="release-header">
+            <div class="version-meta">
+              <span class="version-tag">v1.3.0 — Direct WiZ Local LAN Subsystem</span>
+              <span class="pill-status pill-released">Feature Update</span>
+              <a href="https://github.com/neeraj15022001/DeskOrbit/commit/97d9b41" class="commit-badge" target="_blank" rel="noopener">97d9b41</a>
+            </div>
+            <div class="timestamp-box">
+              <span>Released:</span>
+              <strong>2026-10-21 21:30:00 IST (+05:30)</strong>
+            </div>
+          </div>
+
+          <p class="release-summary">
+            Added direct <strong>WiZ local UDP protocol engine (port 38899)</strong> with Darwin subnet broadcast auto-discovery, manual IP pairing modal, dynamic WiZ scenes, and hybrid local/cloud telemetry diagnostics.
+          </p>
+
+          <!-- Group: Smart Lighting -->
+          <div class="change-group" data-group="lights">
+            <h3 class="change-group-title" style="color: #fbbf24;">💡 Direct WiZ Third-Party Local LAN Subsystem</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Local UDP Protocol (Port 38899):</strong> Direct zero-latency (&lt;10ms) communication with WiZ smart bulbs over local Wi-Fi without requiring external internet.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Subnet Broadcast Discovery:</strong> Dynamically queries Darwin network interfaces (<code>getifaddrs</code>) to auto-discover responding bulbs across active subnets.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Manual IP Modal:</strong> Dedicated sheet allowing manual IP entry (<code>192.168.1.x</code>) and custom bulb naming for partitioned or mesh networks.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Native WiZ Dynamic Scenes:</strong> Added built-in WiZ scene support (Fireplace, Sunset, Party) alongside static presets (Warm White, Daylight, Cozy, Night Light).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Third-Party Integration Guide:</strong> Interactive setup guide sheet in Dashboard walking users through WiZ app pairing and local network configuration.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Micro-Audit Log -->
+          <div class="audit-box">
+            <div class="audit-title">Timestamped Actions</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-10-21 21:30:00 IST</span>
+              <span class="audit-desc">Implemented direct WiZ local UDP socket engine, broadcast auto-discovery, and dynamic scenes (commit 97d9b41)</span>
+            </div>
+          </div>
+        </article>
+      </div>
+
       <!-- ENTRY: v1.2.0 Smart Lighting Release -->
       <div class="timeline-node" data-category="lights devops">
         <div class="node-marker"></div>

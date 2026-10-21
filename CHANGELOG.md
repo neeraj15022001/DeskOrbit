@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.4.0] - 2026-10-21
+
+**Release Date & Time:** 2026-10-21 22:45:00 IST (+05:30)  
+**Target OS:** macOS 14.0+ (Sonoma, Sequoia)  
+**Architectures:** Universal (Apple Silicon & Intel)
+
+### Added
+- **WiZ v2 Cryptographic HMAC-SHA256 Signed UDP Engine (`WizLightService.swift`):**
+  - **WiZ v2 Local Protocol Support:** Full implementation of WiZ v2 signed UDP pilot commands on port `38899`, required by modern WiZ bulb firmware (`v1.38.0+`) which rejects legacy unauthenticated `setPilot` packets.
+  - **HMAC-SHA256 Envelope Generation:** Real-time generation of SHA-256 message authentication codes over alphabetically sorted JSON payload parameters (`key:value`), keyed with the 16-byte home UDP signing key (`udp_signing_key`).
+  - **Dynamic Timestamp Synchronization:** Autonomous tracking of the bulb's monotonically increasing 32-bit counter (`ts` / timestamp) from status response packets, auto-incrementing timestamps for each pilot transmission to defeat replay attack checks.
+  - **Home Structure Auto-Importer (`homeStructure` JSON):** Single-click or auto-detection import of WiZ v2 home configuration JSON exports (generated via WiZ app Third-Party Integrations link), extracting `home_id`, `udp_signing_key`, room mappings, and paired bulb identifiers without manual key entry.
+  - **Download Folder Auto-Discovery:** Automatic scanning of `~/Downloads` for downloaded WiZ configuration payloads, sorted by newest modification date for zero-touch configuration.
+- **macOS BSD Socket Alignment (`WizLightService.swift`):**
+  - **Darwin `sockaddr_in` Alignment:** Corrected macOS Darwin BSD socket structure initialization (`sin_len = UInt8(MemoryLayout<sockaddr_in>.size)`). Resolved silent UDP transmission dropouts when dispatching unicast and broadcast UDP packets via POSIX `sendto()`.
+- **Application Lifecycle & Dashboard Window Presentation (`AppDelegate.swift`):**
+  - **Automatic Dashboard Launch:** DeskOrbit now automatically opens and focuses the full Home-style Dashboard window on launch, providing instant visibility into all connected hardware and smart lights.
+  - **Dock / App Reopen Handler:** Implemented `applicationShouldHandleReopen:hasVisibleWindows:` ensuring clicking the app icon in Dock or Spotlight restores the active Dashboard window.
+- **Diagnostic Logging Subsystem:**
+  - Added centralized persistent diagnostics logging to `/tmp/deskorbit.log` for troubleshooting socket binds, packet round-trips, and HMAC validations in real-time.
+
+### Removed
+- **Samsung SmartThings Cloud Integration:**
+  - Completely purged all Samsung SmartThings Personal Access Token (PAT) storage, cloud REST API networking (`api.smartthings.com/v1`), token verification alerts, and rate-limiting debouncers.
+  - Removed cloud latency bottlenecks, cloud dependency, and credential expiration risks, making DeskOrbit 100% local, private, and zero-cloud.
+
+### Changed
+- **Menu Bar Header Polish (`MenuBarView.swift`):**
+  - Replaced ambiguous header power toggle button with an explicit, high-contrast **Dashboard Window** button and dedicated **Quit DeskOrbit** action.
+  - Cleaned up light card telemetry pills to display exact local Wi-Fi IP and direct hardware MAC address.
+
+---
+
 ## [1.3.0] - 2026-10-21
 
 **Release Date & Time:** 2026-10-21 21:30:00 IST (+05:30)  
