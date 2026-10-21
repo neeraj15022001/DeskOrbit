@@ -426,7 +426,27 @@ public struct MenuBarView: View {
             .buttonStyle(.plain)
         }
         .frame(width: 590)
-        .background(VisualEffectView(material: .popover, blendingMode: .behindWindow))
+        .background(
+            ZStack {
+                VisualEffectView(material: .popover, blendingMode: .behindWindow)
+                LinearGradient(
+                    colors: [Color.white.opacity(0.1), Color.clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.25), Color.clear],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
     }
 
     private func batteryIcon(for level: Int) -> String {

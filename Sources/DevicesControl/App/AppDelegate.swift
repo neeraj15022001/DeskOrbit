@@ -78,14 +78,15 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
         if mainWindowController == nil {
             let window = NSWindow(
-                contentRect: NSRect(x: 0, y: 0, width: 900, height: 620),
-                styleMask: [.titled, .closable, .miniaturizable, .resizable],
+                contentRect: NSRect(x: 0, y: 0, width: 920, height: 630),
+                styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.center()
             window.title = "DeskOrbit Dashboard"
-            window.minSize = NSSize(width: 750, height: 480)
+            window.titlebarAppearsTransparent = true
+            window.minSize = NSSize(width: 780, height: 500)
             window.delegate = self
             window.contentView = NSHostingView(rootView: DashboardView(manager: manager))
 

@@ -53,6 +53,22 @@ public struct OrbitCapsuleSlider: View {
                     )
                     .frame(width: fillWidth)
 
+                // Liquid Glass Transient Interaction Sheen (macOS Golden Gate HIG)
+                if isDragging || isHovering {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(
+                            LinearGradient(
+                                colors: [
+                                    Color.white.opacity(0.18),
+                                    Color.white.opacity(0.04),
+                                    Color.clear
+                                ],
+                                startPoint: .top,
+                                endPoint: .bottom
+                            )
+                        )
+                }
+
                 // Foreground Content & Accessibility Labels
                 HStack(spacing: 8) {
                     Image(systemName: icon)

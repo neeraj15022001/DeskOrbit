@@ -48,159 +48,158 @@ public struct DashboardView: View {
             .navigationSplitViewColumnWidth(min: 190, ideal: 220, max: 260)
         } detail: {
             VStack(spacing: 0) {
-                // MARK: - Top Header / Action Toolbar
-                HStack(alignment: .center, spacing: 12) {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(manager.activeCategory.rawValue)
-                            .font(.system(size: 22, weight: .bold))
+                // MARK: - Floating Liquid Glass Functional Header (macOS Golden Gate)
+                VStack(spacing: 0) {
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(manager.activeCategory.rawValue)
+                                .font(.system(size: 22, weight: .bold))
 
-                        Text(totalActiveDevicesText())
-                            .font(.system(size: 12))
-                            .foregroundColor(.secondary)
-                    }
-
-                    Spacer()
-
-                    if let status = manager.statusMessage {
-                        HStack(spacing: 5) {
-                            Image(systemName: "info.circle.fill")
-                                .font(.system(size: 11))
-                            Text(status)
-                                .font(.system(size: 11, weight: .medium))
-                        }
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(Color.accentColor.opacity(0.1))
-                        .clipShape(Capsule())
-                    }
-
-                    // Smart Bulb Actions
-                    if manager.activeCategory == .all || manager.activeCategory == .lights {
-                        HStack(spacing: 8) {
-                            Button(action: { manager.scanLocalWiZLights() }) {
-                                HStack(spacing: 4) {
-                                    if manager.wizLightService.isScanningLocal {
-                                        ProgressView().controlSize(.mini)
-                                    } else {
-                                        Image(systemName: "wifi")
-                                    }
-                                    Text("Scan Wi-Fi")
-                                }
-                                .font(.system(size: 12, weight: .medium))
-                            }
-                            .controlSize(.regular)
-                            .help("Scan local network for WiZ bulbs on UDP port 38899")
-
-                            Button(action: { manager.isShowingAddBulbSheet = true }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "plus")
-                                    Text("Add by IP")
-                                }
-                                .font(.system(size: 12, weight: .medium))
-                            }
-                            .controlSize(.regular)
-                            .help("Add a WiZ bulb directly by its local IP address")
-
-                            Button(action: { manager.isShowingImportJsonSheet = true }) {
-                                HStack(spacing: 4) {
-                                    Image(systemName: "lock.doc.fill")
-                                    Text("Import JSON")
-                                }
-                                .font(.system(size: 12, weight: .medium))
-                            }
-                            .controlSize(.regular)
-                            .help("Import WiZ v2 Home config JSON export (unlocks verified UDP controls)")
-                        }
-                    }
-
-                    Button(action: { manager.refreshAll() }) {
-                        Label("Refresh", systemImage: "arrow.clockwise")
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .controlSize(.regular)
-                    .help("Refresh All Connected Hardware")
-                }
-                .padding(.horizontal, 24)
-                .padding(.top, 20)
-                .padding(.bottom, 14)
-
-                // MARK: - WiZ Local Control Hub Status Banner
-                if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {
-                    HStack(spacing: 12) {
-                        ZStack {
-                            Circle()
-                                .fill(Color.accentColor.opacity(0.14))
-                                .frame(width: 34, height: 34)
-                            Image(systemName: "lightbulb.fill")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundColor(.accentColor)
-                        }
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            HStack(spacing: 6) {
-                                Text("WiZ Local Control Hub")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.primary)
-
-                                Text("Direct LAN (UDP 38899)")
-                                    .font(.system(size: 10, weight: .semibold))
-                                    .padding(.horizontal, 6)
-                                    .padding(.vertical, 1)
-                                    .background(Color.green.opacity(0.14))
-                                    .foregroundColor(.green)
-                                    .clipShape(Capsule())
-
-                                if let hid = manager.wizLightService.homeId {
-                                    Text("Home #\(hid)")
-                                        .font(.system(size: 10, weight: .semibold, design: .monospaced))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 1)
-                                        .background(Color.accentColor.opacity(0.14))
-                                        .foregroundColor(.accentColor)
-                                        .clipShape(Capsule())
-                                }
-                            }
-
-                            Text("Direct local control over your Wi-Fi with cryptographic HMAC-SHA256 signing and sub-10ms response.")
-                                .font(.system(size: 11))
+                            Text(totalActiveDevicesText())
+                                .font(.system(size: 12))
                                 .foregroundColor(.secondary)
                         }
 
                         Spacer()
 
-                        Button(action: {
-                            manager.wizLightService.autoImportConfigFromDownloads()
-                            manager.showStatus("Checked ~/Downloads for WiZ config!")
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "arrow.down.circle")
-                                Text("Auto-Import")
+                        if let status = manager.statusMessage {
+                            HStack(spacing: 5) {
+                                Image(systemName: "info.circle.fill")
+                                    .font(.system(size: 11))
+                                Text(status)
+                                    .font(.system(size: 11, weight: .medium))
                             }
-                            .font(.system(size: 11, weight: .medium))
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color.accentColor.opacity(0.12))
+                            .clipShape(Capsule())
                         }
-                        .controlSize(.small)
-                        .help("Auto-detect and import exported WiZ configuration from ~/Downloads")
 
-                        Button(action: {
-                            isShowingIntegrationGuide = true
-                        }) {
-                            HStack(spacing: 4) {
-                                Image(systemName: "book.fill")
-                                Text("Guide")
+                        // Smart Bulb Actions
+                        if manager.activeCategory == .all || manager.activeCategory == .lights {
+                            HStack(spacing: 8) {
+                                Button(action: { manager.scanLocalWiZLights() }) {
+                                    HStack(spacing: 4) {
+                                        if manager.wizLightService.isScanningLocal {
+                                            ProgressView().controlSize(.mini)
+                                        } else {
+                                            Image(systemName: "wifi")
+                                        }
+                                        Text("Scan Wi-Fi")
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                }
+                                .controlSize(.regular)
+                                .help("Scan local network for WiZ bulbs on UDP port 38899")
+
+                                Button(action: { manager.isShowingAddBulbSheet = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "plus")
+                                        Text("Add by IP")
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                }
+                                .controlSize(.regular)
+                                .help("Add a WiZ bulb directly by its local IP address")
+
+                                Button(action: { manager.isShowingImportJsonSheet = true }) {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "lock.doc.fill")
+                                        Text("Import JSON")
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                }
+                                .controlSize(.regular)
+                                .help("Import WiZ v2 Home config JSON export (unlocks verified UDP controls)")
                             }
-                            .font(.system(size: 11, weight: .medium))
                         }
-                        .controlSize(.small)
+
+                        Button(action: { manager.refreshAll() }) {
+                            Label("Refresh", systemImage: "arrow.clockwise")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .controlSize(.regular)
+                        .help("Refresh All Connected Hardware")
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 10)
-                    .background(Color(NSColor.controlBackgroundColor).opacity(0.7))
-                    .overlay(
-                        Rectangle().frame(height: 1).foregroundColor(Color.primary.opacity(0.05)),
-                        alignment: .bottom
-                    )
+                    .padding(.horizontal, 24)
+                    .padding(.top, 18)
+                    .padding(.bottom, 12)
+
+                    // WiZ Local Control Hub Status Banner
+                    if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {
+                        HStack(spacing: 12) {
+                            ZStack {
+                                Circle()
+                                    .fill(Color.accentColor.opacity(0.14))
+                                    .frame(width: 34, height: 34)
+                                Image(systemName: "lightbulb.fill")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.accentColor)
+                            }
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: 6) {
+                                    Text("WiZ Local Control Hub")
+                                        .font(.system(size: 12, weight: .semibold))
+                                        .foregroundColor(.primary)
+
+                                    Text("Direct LAN (UDP 38899)")
+                                        .font(.system(size: 10, weight: .semibold))
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 1)
+                                        .background(Color.green.opacity(0.14))
+                                        .foregroundColor(.green)
+                                        .clipShape(Capsule())
+
+                                    if let hid = manager.wizLightService.homeId {
+                                        Text("Home #\(hid)")
+                                            .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 1)
+                                            .background(Color.accentColor.opacity(0.14))
+                                            .foregroundColor(.accentColor)
+                                            .clipShape(Capsule())
+                                    }
+                                }
+
+                                Text("Direct local control over your Wi-Fi with cryptographic HMAC-SHA256 signing and sub-10ms response.")
+                                    .font(.system(size: 11))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Button(action: {
+                                manager.wizLightService.autoImportConfigFromDownloads()
+                                manager.showStatus("Checked ~/Downloads for WiZ config!")
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "arrow.down.circle")
+                                    Text("Auto-Import")
+                                }
+                                .font(.system(size: 11, weight: .medium))
+                            }
+                            .controlSize(.small)
+                            .help("Auto-detect and import exported WiZ configuration from ~/Downloads")
+
+                            Button(action: {
+                                isShowingIntegrationGuide = true
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "book.fill")
+                                    Text("Guide")
+                                }
+                                .font(.system(size: 11, weight: .medium))
+                            }
+                            .controlSize(.small)
+                        }
+                        .padding(.horizontal, 24)
+                        .padding(.vertical, 10)
+                        .background(Color.primary.opacity(0.02))
+                    }
                 }
+                .liquidGlass(.regular, cornerRadius: 0)
 
                 Divider()
 

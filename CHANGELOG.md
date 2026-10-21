@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Comprehensive Apple Human Interface Guidelines (HIG) UI Redesign:**
+  - **Liquid Glass & macOS Golden Gate 27 Visual Principles (`LiquidGlass.swift`):** Applied Apple's dynamic Liquid Glass material to the Dashboard toolbar and WiZ Hub header (`.liquidGlass(.regular)`), enabling underlying cards to diffuse and peek through during scrolling. Capsule sliders take on a dynamic Liquid Glass specular sheen and edge reflection when actively scrubbed or hovered. Configured `NSWindow` with `.fullSizeContentView` and transparent title bar, and added automatic fallbacks for Reduce Transparency and Increase Contrast.
   - **Tactile Capsule Sliders (`OrbitCapsuleSlider` & `OrbitKelvinSlider`):** Replaced default thin sliders with full-height Apple Control Center style capsule sliders featuring dynamic leading iconography, continuous drag scrubbing, high-contrast text adaptation, and a 2200K–6500K Kelvin spectrum track.
   - **Typography & Hit Target Accessibility Floor:** Standardized typography across all components to strictly obey Apple HIG guidelines (`>= 10pt` minimum text, eliminating 8pt/9pt micro-type), with 28x28pt minimum hit targets for buttons and icons.
   - **Calm, Unified Semantic Visual System:** Replaced clashing colored badges with calm Apple Home-style elevated surfaces (`NSColor.controlBackgroundColor`), continuous 14pt corner radii (`.continuous`), and subtle hover elevation.

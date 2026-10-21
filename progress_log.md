@@ -74,6 +74,13 @@ This log documents the chronological development history, engineering decisions,
   4. **Home-Style Card Aesthetics:** Applied continuous 14pt rounded corners (`RoundedRectangle(cornerRadius: 14, style: .continuous)`), elevated semantic control background fills, and subtle hover animations.
   5. **Menu Bar Status Item:** Updated template icon from `macmini` to `slider.horizontal.3` (macOS standard hardware controller glyph).
 
+### Phase 7: macOS Golden Gate 27 & Liquid Glass Material Integration
+- **Liquid Glass Architecture (`LiquidGlass.swift`):**
+  1. **Floating Functional Layer:** The Dashboard top header floats with Liquid Glass (`.regular` variant), creating realistic background vibrancy and scroll-edge diffusion over scrolling hardware cards.
+  2. **Transient Control Sheen:** Interactive capsule sliders take on specular highlights and edge gradients when actively dragged or hovered.
+  3. **Edge-to-Edge Window:** Enabled `.fullSizeContentView` and `titlebarAppearsTransparent = true` on `NSWindow` in `AppDelegate.swift`.
+  4. **Accessibility Graceful Degradation:** Built-in hooks for `accessibilityDisplayShouldReduceTransparency` (switches to opaque fills) and `accessibilityDisplayShouldIncreaseContrast` (doubles border weight).
+
 ---
 
 ## 2026-10-13: Smart Lighting Subsystem Launch (v1.2.0)
