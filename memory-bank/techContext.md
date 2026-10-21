@@ -52,6 +52,6 @@
 - **Release DMG Generation:** `create_dmg.sh`
   - Produces compressed, distributable `DeskOrbit.dmg` with `/Applications` drag-and-drop symlink.
 - **Continuous Integration (CI):**
-  - `.github/workflows/ci.yml`: Automated compilation and tests on macOS runners.
-  - `.github/workflows/release.yml`: Automatic tagging and GitHub Releases DMG asset upload.
+  - `.github/workflows/ci.yml`: Automated compilation and verification for pull requests.
+  - `.github/workflows/release.yml`: Automated build triggered on every push to `main` (or version tags), dynamic version & tag resolution from `CHANGELOG.md`, DMG/ZIP packaging with SHA256 checksums, and GitHub Releases publication.
   - `.github/workflows/pages.yml`: Automated deployment of `docs/` to GitHub Pages.

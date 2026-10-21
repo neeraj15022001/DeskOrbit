@@ -10,3 +10,4 @@ DerivedData/
 *.dmg
 *.zip
 dmg_staging/
+.agents/

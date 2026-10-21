@@ -4,11 +4,17 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
-echo "🔨 Ensuring latest release build..."
+VERSION="${1:-$(grep -m1 -E '^## \[[0-9]+\.[0-9]+\.[0-9]+' "$DIR/CHANGELOG.md" | sed -E 's/.*\[([0-9]+\.[0-9]+\.[0-9]+)\].*/\1/')}"
+if [ -z "$VERSION" ]; then
+    VERSION="1.4.0"
+fi
+export APP_VERSION="$VERSION"
+
+echo "🔨 Ensuring latest release build (v$VERSION)..."
 ./bundle_app.sh
 
 DMG_TEMP="$DIR/dmg_staging"
-DMG_NAME="DeskOrbit-v1.0.0.dmg"
+DMG_NAME="DeskOrbit-v${VERSION}.dmg"
 OUTPUT_DMG="$DIR/$DMG_NAME"
 
 echo "🧹 Preparing DMG staging directory..."

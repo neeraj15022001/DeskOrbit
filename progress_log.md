@@ -56,6 +56,15 @@ This log documents the chronological development history, engineering decisions,
   - Replaced ambiguous menu bar header power icon with explicit Dashboard Window and Quit buttons.
 - **Result:** Successfully committed in `d6409cf` and pushed to `main`.
 
+### Phase 5: Automated Continuous GitHub Release Workflow
+- **Goal:** Trigger automated build and release generation whenever new code is pushed to `main`.
+- **Workflow Architecture (`.github/workflows/release.yml`):**
+  - Triggers on `push` to `main`, tags `v*`, and `workflow_dispatch`.
+  - Dynamically extracts latest semantic version from `CHANGELOG.md` (e.g. `1.4.0`).
+  - Checks remote git tags: if `v1.4.0` is fresh, publishes `DeskOrbit v1.4.0` with tag `v1.4.0`; subsequent incremental commits automatically receive build-incremented tags `v1.4.0.<run_number>`.
+  - Extracts formatted release notes directly from `CHANGELOG.md`.
+  - Builds `DeskOrbit.app` on `macos-14` runner, injects `CFBundleShortVersionString` into `Info.plist`, builds compressed `.dmg` and `.zip`, computes SHA256 checksums, and publishes assets via `softprops/action-gh-release@v2`.
+
 ---
 
 ## 2026-10-13: Smart Lighting Subsystem Launch (v1.2.0)

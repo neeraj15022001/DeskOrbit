@@ -27,6 +27,12 @@ chmod +x "$MACOS/DeskOrbit"
 
 if [ -f "$DIR/Info.plist" ]; then
     cp "$DIR/Info.plist" "$CONTENTS/Info.plist"
+    if [ -n "$APP_VERSION" ]; then
+        plutil -replace CFBundleShortVersionString -string "$APP_VERSION" "$CONTENTS/Info.plist" 2>/dev/null || true
+    fi
+    if [ -n "$BUILD_NUMBER" ]; then
+        plutil -replace CFBundleVersion -string "$BUILD_NUMBER" "$CONTENTS/Info.plist" 2>/dev/null || true
+    fi
 fi
 
 if [ -f "$DIR/AppIcon.icns" ]; then
