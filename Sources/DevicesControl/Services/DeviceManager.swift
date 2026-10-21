@@ -15,8 +15,10 @@ public final class DeviceManager: ObservableObject {
     @Published public var isAdvancedPowerView: Bool = false
     @Published public var isDiscoveringLights: Bool = false
     @Published public var isShowingAddBulbSheet: Bool = false
+    @Published public var isShowingImportJsonSheet: Bool = false
     @Published public var newBulbIPInput: String = ""
     @Published public var newBulbNameInput: String = ""
+    @Published public var jsonConfigTextInput: String = ""
 
     @Published public var defaultAudioOutput: AudioItem?
     @Published public var mainDisplay: DisplayItem?
@@ -239,6 +241,32 @@ public final class DeviceManager: ObservableObject {
                     self?.showStatus("Synced \(discovered.count) bulb(s) from SmartThings!")
                 }
             }
+        }
+    }
+
+    public func importWizJsonConfig(jsonString: String) {
+        guard let data = jsonString.data(using: .utf8) else {
+            showStatus("Invalid JSON data.")
+            return
+        }
+        let result = wizLightService.importHomeConfig(data: data)
+        switch result {
+        case .success(let count):
+            showStatus("Imported WiZ Home config with \(count) device(s)!")
+            isShowingImportJsonSheet = false
+            jsonConfigTextInput = ""
+        case .failure(let err):
+            showStatus("Failed to parse WiZ config JSON: \(err.localizedDescription)")
+        }
+    }
+
+    public func importWizConfigFile(url: URL) {
+        let result = wizLightService.importHomeConfigFile(url: url)
+        switch result {
+        case .success(let count):
+            showStatus("Imported WiZ config file with \(count) device(s)!")
+        case .failure(let err):
+            showStatus("Error importing file: \(err.localizedDescription)")
         }
     }
 

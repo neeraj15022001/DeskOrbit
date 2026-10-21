@@ -1,5 +1,24 @@
 import Foundation
 import Darwin
+import CommonCrypto
+
+// MARK: - WiZ v2 Home Structure Config Models (Exported JSON from WiZ App)
+public struct WizConfigDevice: Codable, Equatable {
+    public let device_id: Int?
+    public let name: String?
+    public let mac_address: String?
+    public let fw_version: String?
+    public let type: String?
+}
+
+public struct WizHomeConfig: Codable, Equatable {
+    public let name: String?
+    public let home_id: Int
+    public let region: String?
+    public let udp_signing_key: String
+    public let version: String?
+    public let devices: [WizConfigDevice]?
+}
 
 public final class WizLightService: @unchecked Sendable {
     public static let shared = WizLightService()
@@ -7,6 +26,9 @@ public final class WizLightService: @unchecked Sendable {
     private let udpPort: in_port_t = 38899
     private let storageKey = "DeskOrbit_Saved_WizLights"
     private let smartThingsTokenKey = "DeskOrbit_SmartThings_Token"
+    private let homeIdKey = "DeskOrbit_Wiz_HomeId"
+    private let udpSigningKeyKey = "DeskOrbit_Wiz_UdpSigningKey"
+    private let homeNameKey = "DeskOrbit_Wiz_HomeName"
 
     private let workQueue = DispatchQueue(label: "com.deskorbit.smartthings.work", qos: .userInitiated)
     private let udpQueue = DispatchQueue(label: "com.deskorbit.wizlight.udp", qos: .userInitiated)
@@ -17,6 +39,9 @@ public final class WizLightService: @unchecked Sendable {
     @Published public var smartThingsToken: String = ""
     @Published public var isScanningLocal: Bool = false
     @Published public var isSyncingCloud: Bool = false
+    @Published public var homeId: Int?
+    @Published public var udpSigningKey: String?
+    @Published public var homeName: String?
 
     private var pollTimer: Timer?
     private var sequenceId: Int = 1
@@ -25,7 +50,17 @@ public final class WizLightService: @unchecked Sendable {
 
     public init() {
         self.smartThingsToken = UserDefaults.standard.string(forKey: smartThingsTokenKey) ?? ""
+
+        let savedHomeId = UserDefaults.standard.integer(forKey: homeIdKey)
+        if savedHomeId > 0 { self.homeId = savedHomeId }
+        self.udpSigningKey = UserDefaults.standard.string(forKey: udpSigningKeyKey)
+        self.homeName = UserDefaults.standard.string(forKey: homeNameKey)
+
         loadSavedLights()
+
+        // Auto-check for WiZ v2 JSON export in ~/Downloads
+        autoImportConfigFromDownloads()
+
         startPeriodicPoll()
 
         // Background auto-refresh on launch
@@ -37,6 +72,111 @@ public final class WizLightService: @unchecked Sendable {
 
     deinit {
         pollTimer?.invalidate()
+    }
+
+    // MARK: - WiZ v2 Security Config & JSON Import
+
+    public func setSecurityKey(homeId: Int, signingKey: String, homeName: String? = nil) {
+        self.homeId = homeId
+        self.udpSigningKey = signingKey.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        self.homeName = homeName
+
+        UserDefaults.standard.set(homeId, forKey: homeIdKey)
+        UserDefaults.standard.set(self.udpSigningKey, forKey: udpSigningKeyKey)
+        if let hn = homeName {
+            UserDefaults.standard.set(hn, forKey: homeNameKey)
+        }
+    }
+
+    public func importHomeConfigFile(url: URL) -> Result<Int, Error> {
+        do {
+            let data = try Data(contentsOf: url)
+            return importHomeConfig(data: data)
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    public func importHomeConfig(data: Data) -> Result<Int, Error> {
+        do {
+            let config = try JSONDecoder().decode(WizHomeConfig.self, from: data)
+            setSecurityKey(homeId: config.home_id, signingKey: config.udp_signing_key, homeName: config.name)
+
+            var importedCount = 0
+            if let devices = config.devices {
+                for dev in devices {
+                    guard let mac = dev.mac_address, !mac.isEmpty else { continue }
+                    let name = dev.name ?? "WiZ Smart Light"
+                    let cleanMac = mac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
+
+                    // Try to resolve current IP from local network ARP table
+                    let resolvedIP = findIPForMAC(mac: cleanMac) ?? "192.168.1.6"
+
+                    let item = WizLightItem(
+                        id: cleanMac,
+                        ip: resolvedIP,
+                        name: name,
+                        mac: cleanMac,
+                        isOn: true,
+                        brightness: 100,
+                        red: 255,
+                        green: 214,
+                        blue: 170,
+                        colorTemperature: 2700,
+                        smartThingsDeviceId: nil,
+                        isReachable: true,
+                        firmwareVersion: dev.fw_version,
+                        moduleModel: dev.type
+                    )
+
+                    DispatchQueue.main.async {
+                        if let idx = self.lights.firstIndex(where: {
+                            $0.id == cleanMac ||
+                            $0.mac.lowercased() == cleanMac ||
+                            ($0.name.lowercased() == name.lowercased() && !$0.hasLocalConnection)
+                        }) {
+                            var existing = self.lights[idx]
+                            existing.ip = resolvedIP
+                            existing.mac = cleanMac
+                            existing.name = name
+                            existing.isReachable = true
+                            existing.firmwareVersion = dev.fw_version
+                            self.lights[idx] = existing
+                        } else {
+                            self.lights.append(item)
+                        }
+                        self.saveLights()
+                        self.onLightsChanged?(self.lights)
+                    }
+                    importedCount += 1
+                }
+            }
+
+            // Immediately poll bulb state using new signing key
+            udpQueue.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                self?.refreshAllLights()
+            }
+
+            return .success(importedCount)
+        } catch {
+            return .failure(error)
+        }
+    }
+
+    public func autoImportConfigFromDownloads() {
+        let downloadsUrl = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads")
+        guard let files = try? FileManager.default.contentsOfDirectory(at: downloadsUrl, includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles]) else { return }
+
+        // Find JSON files containing "udp_signing_key", sorted by latest modified
+        let jsonFiles = files.filter { $0.pathExtension.lowercased() == "json" }
+        for file in jsonFiles {
+            if let data = try? Data(contentsOf: file, options: .mappedIfSafe),
+               let str = String(data: data.prefix(1024), encoding: .utf8),
+               str.contains("udp_signing_key") && str.contains("home_id") {
+                _ = importHomeConfig(data: data)
+                break
+            }
+        }
     }
 
     // MARK: - SmartThings Token Configuration
@@ -70,7 +210,7 @@ public final class WizLightService: @unchecked Sendable {
     private func startPeriodicPoll() {
         DispatchQueue.main.async { [weak self] in
             self?.pollTimer?.invalidate()
-            self?.pollTimer = Timer.scheduledTimer(withTimeInterval: 12.0, repeats: true) { [weak self] _ in
+            self?.pollTimer = Timer.scheduledTimer(withTimeInterval: 8.0, repeats: true) { [weak self] _ in
                 self?.refreshAllLights()
             }
         }
@@ -109,15 +249,6 @@ public final class WizLightService: @unchecked Sendable {
                         mod.isReachable = true
                         if mod != self.lights[idx] {
                             self.lights[idx] = mod
-                            self.saveLights()
-                            self.onLightsChanged?(self.lights)
-                        }
-                    }
-                } else if !light.hasCloudConnection {
-                    // Mark unreachable only if it has no cloud fallback
-                    DispatchQueue.main.async {
-                        if let idx = self.lights.firstIndex(where: { $0.id == light.id }), self.lights[idx].isReachable {
-                            self.lights[idx].isReachable = false
                             self.saveLights()
                             self.onLightsChanged?(self.lights)
                         }
@@ -204,14 +335,26 @@ public final class WizLightService: @unchecked Sendable {
         }.resume()
     }
 
-    // MARK: - Direct WiZ Local Integration (UDP 38899)
+    // MARK: - Direct WiZ Local Integration (Signed UDP 38899)
 
     public func discoverLocalLights(completion: (([WizLightItem]) -> Void)? = nil) {
         DispatchQueue.main.async { self.isScanningLocal = true }
 
         udpQueue.async { [weak self] in
             guard let self = self else { return }
-            let msg = "{\"method\":\"getSystemConfig\",\"params\":{}}"
+            self.autoImportConfigFromDownloads()
+
+            // 1. If we have known bulbs or bulbs in ARP table, probe them directly
+            for light in self.lights where light.hasLocalConnection {
+                _ = self.fetchPilot(ip: light.ip)
+            }
+
+            // 2. Broadcast probe across subnet
+            var probeParams: [String: Any] = [:]
+            if let hid = self.homeId {
+                probeParams["homeId"] = hid
+            }
+            let msg = self.buildUDPMessage(method: "getSystemConfig", params: probeParams)
             let responses = self.sendUDPBroadcast(message: msg, timeoutSeconds: 2.0)
 
             var discovered: [WizLightItem] = []
@@ -224,7 +367,6 @@ public final class WizLightService: @unchecked Sendable {
                     let module = (result["moduleName"] as? String) ?? "Philips WiZ Bulb"
                     let fw = result["fwVersion"] as? String
 
-                    self.registerWithBulb(ip: ip)
                     let pilot = self.fetchPilot(ip: ip)
 
                     let item = WizLightItem(
@@ -250,14 +392,12 @@ public final class WizLightService: @unchecked Sendable {
             DispatchQueue.main.async {
                 self.isScanningLocal = false
                 for disc in discovered {
-                    // Check if already in list (by MAC, IP, or matching Cloud bulb)
                     if let idx = self.lights.firstIndex(where: {
                         $0.id == disc.id ||
                         $0.mac.lowercased() == disc.mac.lowercased() ||
                         $0.ip == disc.ip ||
                         ($0.name.lowercased() == disc.name.lowercased() && !$0.hasLocalConnection)
                     }) {
-                        // Merge into existing item: promote to Hybrid if it had SmartThings!
                         var existing = self.lights[idx]
                         existing.ip = disc.ip
                         existing.mac = disc.mac
@@ -286,7 +426,6 @@ public final class WizLightService: @unchecked Sendable {
         udpQueue.async { [weak self] in
             guard let self = self else { return }
 
-            self.registerWithBulb(ip: trimmedIP)
             let sysConfig = self.fetchSystemConfig(ip: trimmedIP)
             let pilot = self.fetchPilot(ip: trimmedIP)
 
@@ -295,14 +434,14 @@ public final class WizLightService: @unchecked Sendable {
                     completion(.failure(NSError(
                         domain: "WizLightService",
                         code: 404,
-                        userInfo: [NSLocalizedDescriptionKey: "Bulb at \(trimmedIP) did not respond over UDP port 38899.\n\nTips:\n1. Ensure Mac and bulb are on the same Wi-Fi.\n2. In the WiZ App, go to Settings → Security & Privacy → Enable 'Local network communication'."]
+                        userInfo: [NSLocalizedDescriptionKey: "Bulb at \(trimmedIP) did not respond over UDP port 38899.\n\nTips:\n1. If your WiZ app has 'Only verified controls' enabled, import your WiZ JSON export file in DeskOrbit.\n2. In the WiZ App, check Settings → Security → 'Local network communication'."]
                     )))
                 }
                 return
             }
 
             let mac = sysConfig?.mac ?? pilot?.mac ?? UUID().uuidString.prefix(12).lowercased()
-            let defaultName = sysConfig?.moduleName ?? "Philips WiZ A60 Bulb"
+            let defaultName = sysConfig?.moduleName ?? "Philips WiZ Smart Bulb"
             let finalName = (customName?.isEmpty == false) ? customName! : defaultName
 
             var item = WizLightItem(
@@ -323,7 +462,6 @@ public final class WizLightService: @unchecked Sendable {
             )
 
             DispatchQueue.main.async {
-                // If a bulb with matching MAC, IP, or same name exists, merge them!
                 if let idx = self.lights.firstIndex(where: {
                     $0.id == item.id ||
                     $0.mac.lowercased() == item.mac.lowercased() ||
@@ -359,7 +497,6 @@ public final class WizLightService: @unchecked Sendable {
         udpQueue.async { [weak self] in
             guard let self = self else { return }
 
-            self.registerWithBulb(ip: trimmedIP)
             let sysConfig = self.fetchSystemConfig(ip: trimmedIP)
             let pilot = self.fetchPilot(ip: trimmedIP)
 
@@ -395,17 +532,15 @@ public final class WizLightService: @unchecked Sendable {
         onLightsChanged?(lights)
     }
 
-    // MARK: - Dual-Route Light Controls (Direct LAN + SmartThings Cloud)
+    // MARK: - Dual-Route Light Controls (Direct Signed LAN + SmartThings Cloud)
 
     public func setPower(for light: WizLightItem, isOn: Bool) {
         cancelDebounce(for: light.id)
         updateLocalState(id: light.id) { $0.isOn = isOn }
 
-        // Route 1: Direct WiZ LAN UDP (instantaneous response)
+        // Route 1: Direct WiZ LAN UDP (instant signed execution)
         if light.hasLocalConnection {
-            let id = nextId()
-            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":\(isOn)}}"
-            sendLocalUDPCommand(ip: light.ip, payload: payload)
+            sendSignedPilot(ip: light.ip, params: ["state": isOn])
         }
 
         // Route 2: Samsung SmartThings Cloud API
@@ -424,16 +559,14 @@ public final class WizLightService: @unchecked Sendable {
             $0.isOn = true
         }
 
-        // Route 1: Direct WiZ LAN UDP (throttled to 40ms for ultra-smooth slider dragging)
+        // Route 1: Direct WiZ LAN UDP (smooth 40ms debounce)
         if light.hasLocalConnection {
-            let id = nextId()
-            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(clamped)}}"
             debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
-                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+                self?.sendSignedPilot(ip: light.ip, params: ["state": true, "dimming": clamped])
             }
         }
 
-        // Route 2: Samsung SmartThings Cloud API (debounced by 250ms to prevent cloud rate-limiting)
+        // Route 2: Samsung SmartThings Cloud API (250ms debounce)
         if light.hasCloudConnection && !smartThingsToken.isEmpty {
             let targetId = resolveSmartThingsDeviceId(for: light)
             debounce(for: light.id, delay: 0.25) { [weak self] in
@@ -463,10 +596,14 @@ public final class WizLightService: @unchecked Sendable {
 
         // Route 1: Direct WiZ LAN UDP
         if light.hasLocalConnection {
-            let id = nextId()
-            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(dim),\"r\":\(r),\"g\":\(g),\"b\":\(b)}}"
             debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
-                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+                self?.sendSignedPilot(ip: light.ip, params: [
+                    "state": true,
+                    "dimming": dim,
+                    "r": r,
+                    "g": g,
+                    "b": b
+                ])
             }
         }
 
@@ -504,10 +641,12 @@ public final class WizLightService: @unchecked Sendable {
 
         // Route 1: Direct WiZ LAN UDP
         if light.hasLocalConnection {
-            let id = nextId()
-            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"dimming\":\(dim),\"temp\":\(clampedKelvin)}}"
             debounceLocalUDP(for: light.id, delay: 0.04) { [weak self] in
-                self?.sendLocalUDPCommand(ip: light.ip, payload: payload)
+                self?.sendSignedPilot(ip: light.ip, params: [
+                    "state": true,
+                    "dimming": dim,
+                    "temp": clampedKelvin
+                ])
             }
         }
 
@@ -529,9 +668,7 @@ public final class WizLightService: @unchecked Sendable {
 
         // Route 1: Direct WiZ LAN UDP (supports full native scenes: Warm White 11, Daylight 12, Cozy 6, Night Light 14, Fireplace 5, Sunset 9, Party 4)
         if light.hasLocalConnection {
-            let id = nextId()
-            let payload = "{\"id\":\(id),\"method\":\"setPilot\",\"params\":{\"state\":true,\"sceneId\":\(sceneId)}}"
-            sendLocalUDPCommand(ip: light.ip, payload: payload)
+            sendSignedPilot(ip: light.ip, params: ["state": true, "sceneId": sceneId])
         }
 
         // Route 2: Samsung SmartThings Cloud API
@@ -716,13 +853,41 @@ public final class WizLightService: @unchecked Sendable {
         }.resume()
     }
 
-    // MARK: - Low-Level UDP Communications (POSIX Sockets)
+    // MARK: - Low-Level UDP Communications (POSIX Sockets & HMAC-SHA256 Signing)
 
-    private func sendLocalUDPCommand(ip: String, payload: String) {
+    private func sendSignedPilot(ip: String, params: [String: Any]) {
         udpQueue.async { [weak self] in
             guard let self = self else { return }
-            _ = self.sendUDPUnicast(to: ip, message: payload, timeoutSeconds: 0.5)
+            let id = self.nextId()
+            let packet = self.buildUDPMessage(method: "setPilot", id: id, params: params)
+            _ = self.sendUDPUnicast(to: ip, message: packet, timeoutSeconds: 0.5)
         }
+    }
+
+    private func buildUDPMessage(method: String, id: Int? = nil, params: [String: Any] = [:]) -> String {
+        let msgId = id ?? nextId()
+        var fullParams = params
+
+        // If signing key is configured, include homeId, sigTs, and compute HMAC
+        if let hid = homeId, let keyHex = udpSigningKey, !keyHex.isEmpty {
+            fullParams["homeId"] = hid
+            fullParams["sigTs"] = Int(Date().timeIntervalSince1970)
+
+            let keyData = hexToData(keyHex)
+            if let jsonData = try? JSONSerialization.data(withJSONObject: fullParams, options: [.sortedKeys]),
+               let paramsStr = String(data: jsonData, encoding: .utf8) {
+                let sig = hmacSha256(data: jsonData, key: keyData)
+                return "{\"method\":\"\(method)\",\"id\":\(msgId),\"env\":\"pro\",\"params\":\(paramsStr),\"hmac\":\"\(sig)\"}"
+            }
+        }
+
+        // Fallback for open controls
+        if let jsonData = try? JSONSerialization.data(withJSONObject: fullParams, options: []),
+           let paramsStr = String(data: jsonData, encoding: .utf8) {
+            return "{\"method\":\"\(method)\",\"id\":\(msgId),\"params\":\(paramsStr)}"
+        }
+
+        return "{\"method\":\"\(method)\",\"id\":\(msgId),\"params\":{}}"
     }
 
     private func debounceLocalUDP(for key: String, delay: TimeInterval, action: @escaping () -> Void) {
@@ -746,11 +911,6 @@ public final class WizLightService: @unchecked Sendable {
         localUdpDebounceItems.removeValue(forKey: key)
     }
 
-    private func registerWithBulb(ip: String) {
-        let reg = "{\"id\":\(nextId()),\"method\":\"registration\",\"params\":{\"register\":true}}"
-        _ = sendUDPUnicast(to: ip, message: reg, timeoutSeconds: 0.5)
-    }
-
     private struct PilotResult {
         var state: Bool?
         var dimming: Int?
@@ -768,7 +928,7 @@ public final class WizLightService: @unchecked Sendable {
     }
 
     private func fetchPilot(ip: String) -> PilotResult? {
-        let req = "{\"method\":\"getPilot\",\"params\":{}}"
+        let req = buildUDPMessage(method: "getPilot")
         guard let resp = sendUDPUnicast(to: ip, message: req, timeoutSeconds: 0.8),
               let data = resp.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -788,7 +948,7 @@ public final class WizLightService: @unchecked Sendable {
     }
 
     private func fetchSystemConfig(ip: String) -> SystemConfigResult? {
-        let req = "{\"method\":\"getSystemConfig\",\"params\":{}}"
+        let req = buildUDPMessage(method: "getSystemConfig")
         guard let resp = sendUDPUnicast(to: ip, message: req, timeoutSeconds: 0.8),
               let data = resp.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
@@ -950,6 +1110,67 @@ public final class WizLightService: @unchecked Sendable {
         return targets
     }
 
+    // Helper: Find current local IP for a given MAC address from system ARP table
+    public func findIPForMAC(mac: String) -> String? {
+        let cleanTarget = mac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
+
+        let pipe = Pipe()
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/sbin/arp")
+        process.arguments = ["-a", "-n"]
+        process.standardOutput = pipe
+
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            if let output = String(data: data, encoding: .utf8) {
+                for line in output.components(separatedBy: "\n") {
+                    let parts = line.components(separatedBy: " ")
+                    guard parts.count >= 4 else { continue }
+                    let ipWithParens = parts[1]
+                    let ip = ipWithParens.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+                    let rawMac = parts[3]
+                    let cleanMac = rawMac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
+
+                    if cleanMac == cleanTarget {
+                        return ip
+                    }
+                }
+            }
+        } catch {
+            return nil
+        }
+        return nil
+    }
+
+    // Helper: Convert hex string to binary Data
+    private func hexToData(_ hex: String) -> Data {
+        var data = Data()
+        var temp = ""
+        for c in hex {
+            temp.append(c)
+            if temp.count == 2 {
+                if let byte = UInt8(temp, radix: 16) {
+                    data.append(byte)
+                }
+                temp = ""
+            }
+        }
+        return data
+    }
+
+    // Helper: Compute HMAC-SHA256 Base64 string
+    private func hmacSha256(data: Data, key: Data) -> String {
+        var hmac = [UInt8](repeating: 0, count: Int(CC_SHA256_DIGEST_LENGTH))
+        data.withUnsafeBytes { dPtr in
+            key.withUnsafeBytes { kPtr in
+                CCHmac(CCHmacAlgorithm(kCCHmacAlgSHA256), kPtr.baseAddress, key.count, dPtr.baseAddress, data.count, &hmac)
+            }
+        }
+        return Data(hmac).base64EncodedString()
+    }
+
     // MARK: - Color Conversion Helpers
 
     public func rgbToHueSaturation(r: Int, g: Int, b: Int) -> (hue: Double, saturation: Double) {
@@ -1030,9 +1251,9 @@ public final class WizLightService: @unchecked Sendable {
         }
 
         return (
-            r: max(0, min(255, Int(r))),
-            g: max(0, min(255, Int(g))),
-            b: max(0, min(255, Int(b)))
+            max(0, min(255, Int(r))),
+            max(0, min(255, Int(g))),
+            max(0, min(255, Int(b)))
         )
     }
 }

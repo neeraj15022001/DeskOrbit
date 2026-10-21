@@ -83,6 +83,15 @@ public struct DashboardView: View {
                             .controlSize(.regular)
                             .help("Add a WiZ bulb directly by its local IP address")
 
+                            Button(action: { manager.isShowingImportJsonSheet = true }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "lock.doc.fill")
+                                    Text("Import WiZ JSON")
+                                }
+                            }
+                            .controlSize(.regular)
+                            .help("Import WiZ v2 Home config JSON export (unlocks verified UDP controls)")
+
                             Button(action: { manager.syncSmartThings() }) {
                                 HStack(spacing: 4) {
                                     if manager.wizLightService.isSyncingCloud {
@@ -140,9 +149,22 @@ public struct DashboardView: View {
                                     .background(Color.cyan.opacity(0.18))
                                     .foregroundColor(.cyan)
                                     .cornerRadius(4)
+
+                                if let hid = manager.wizLightService.homeId {
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "lock.shield.fill")
+                                        Text("v2 Authenticated (\(hid))")
+                                    }
+                                    .font(.system(size: 8, weight: .bold))
+                                    .padding(.horizontal, 5)
+                                    .padding(.vertical, 1)
+                                    .background(Color.purple.opacity(0.18))
+                                    .foregroundColor(.purple)
+                                    .cornerRadius(4)
+                                }
                             }
 
-                            Text("DeskOrbit communicates directly over local Wi-Fi (UDP 38899) and connects to Samsung SmartThings Cloud.")
+                            Text("DeskOrbit communicates directly over local Wi-Fi (UDP 38899) with cryptographic HMAC-SHA256 signing and Samsung SmartThings Cloud.")
                                 .font(.system(size: 10))
                                 .foregroundColor(.secondary)
                         }
@@ -154,7 +176,7 @@ public struct DashboardView: View {
                             set: { manager.wizLightService.setSmartThingsToken($0) }
                         ))
                         .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 220)
+                        .frame(maxWidth: 200)
                         .controlSize(.small)
 
                         if let url = URL(string: "https://account.smartthings.com/tokens") {
@@ -216,6 +238,9 @@ public struct DashboardView: View {
         .sheet(isPresented: $manager.isShowingAddBulbSheet) {
             AddBulbSheetView(manager: manager)
         }
+        .sheet(isPresented: $manager.isShowingImportJsonSheet) {
+            ImportJsonSheetView(manager: manager)
+        }
         .sheet(isPresented: $isShowingIntegrationGuide) {
             WizIntegrationGuideSheetView(isPresented: $isShowingIntegrationGuide)
         }
@@ -242,7 +267,7 @@ public struct DashboardView: View {
                     Text("No WiZ Smart Bulbs Found")
                         .font(.system(size: 16, weight: .bold))
 
-                    Text("DeskOrbit supports two ways to connect your WiZ smart bulbs:\n\n1. **Direct Wi-Fi (LAN):** Fast local communication over UDP 38899 without cloud delay.\n2. **Samsung SmartThings Cloud:** Connected via the WiZ app's third-party integration.")
+                    Text("DeskOrbit supports two ways to connect your WiZ smart bulbs:\n\n1. **Direct Wi-Fi (LAN):** Fast local communication over UDP 38899 with HMAC-SHA256 authentication.\n2. **Samsung SmartThings Cloud:** Connected via the WiZ app's third-party integration.")
                         .font(.system(size: 12))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -256,6 +281,13 @@ public struct DashboardView: View {
                             }
                         }
                         .buttonStyle(.borderedProminent)
+
+                        Button(action: { manager.isShowingImportJsonSheet = true }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "lock.doc.fill")
+                                Text("Import WiZ JSON")
+                            }
+                        }
 
                         Button(action: { manager.isShowingAddBulbSheet = true }) {
                             HStack(spacing: 4) {
@@ -502,7 +534,7 @@ private struct AddBulbSheetView: View {
                 Text("Bulb Local IP Address:")
                     .font(.system(size: 11, weight: .semibold))
 
-                TextField("e.g. 192.168.1.45", text: $manager.newBulbIPInput)
+                TextField("e.g. 192.168.1.6", text: $manager.newBulbIPInput)
                     .textFieldStyle(.roundedBorder)
 
                 Text("Custom Name (Optional):")
@@ -520,7 +552,7 @@ private struct AddBulbSheetView: View {
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.secondary)
                 }
-                Text("Ensure your WiZ bulb is connected to the same Wi-Fi network as this Mac. In the WiZ App, make sure 'Local network communication' is enabled under Settings.")
+                Text("If your WiZ bulb has 'Only verified controls' enabled, make sure you have imported your WiZ v2 JSON export file.")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
             }
@@ -558,6 +590,92 @@ private struct AddBulbSheetView: View {
         }
         .padding(20)
         .frame(width: 440)
+    }
+}
+
+// MARK: - Import JSON Config Sheet
+private struct ImportJsonSheetView: View {
+    @ObservedObject var manager: DeviceManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                ZStack {
+                    Circle()
+                        .fill(Color.purple.opacity(0.15))
+                        .frame(width: 36, height: 36)
+                    Image(systemName: "lock.doc.fill")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(.purple)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Import WiZ v2 Home Config (.json)")
+                        .font(.system(size: 15, weight: .bold))
+                    Text("Authenticates local UDP commands via HMAC-SHA256 signing")
+                        .font(.system(size: 11))
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button("Close") {
+                    manager.isShowingImportJsonSheet = false
+                }
+                .controlSize(.small)
+            }
+
+            Divider()
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Paste your exported WiZ Home JSON below:")
+                    .font(.system(size: 11, weight: .semibold))
+
+                TextEditor(text: $manager.jsonConfigTextInput)
+                    .font(.system(size: 10, design: .monospaced))
+                    .frame(height: 130)
+                    .padding(4)
+                    .background(Color(NSColor.controlBackgroundColor))
+                    .overlay(RoundedRectangle(cornerRadius: 6).stroke(Color.primary.opacity(0.1)))
+
+                HStack {
+                    Button(action: {
+                        manager.wizLightService.autoImportConfigFromDownloads()
+                        manager.showStatus("Checked ~/Downloads and loaded config!")
+                        manager.isShowingImportJsonSheet = false
+                    }) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.down.circle")
+                            Text("Auto-Import from ~/Downloads")
+                        }
+                    }
+                    .controlSize(.regular)
+
+                    Spacer()
+
+                    Button("Import JSON") {
+                        manager.importWizJsonConfig(jsonString: manager.jsonConfigTextInput)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.regular)
+                    .disabled(manager.jsonConfigTextInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("How to get this JSON file:")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                Text("1. In the WiZ v2 app, tap Settings (gear) → Integrations → Local Integrations.\n2. Tap the export button to generate the 15-minute download link.\n3. Open the link in a browser to save the .json file (e.g. into Downloads).\n4. Click 'Auto-Import from ~/Downloads' above, and DeskOrbit will instantly load your bulbs!")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+            }
+            .padding(8)
+            .background(Color.primary.opacity(0.04))
+            .cornerRadius(8)
+        }
+        .padding(20)
+        .frame(width: 490)
     }
 }
 
@@ -624,15 +742,15 @@ private struct WizIntegrationGuideSheetView: View {
                         HStack(spacing: 6) {
                             Image(systemName: "wifi")
                                 .foregroundColor(.green)
-                            Text("Method 2: Direct WiZ Local Integration (LAN UDP)")
+                            Text("Method 2: Direct WiZ Local Integration (Signed LAN UDP)")
                                 .font(.system(size: 12, weight: .bold))
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text("1. In the **WiZ App**, go to **Settings** → **Security & Privacy** (or Integrations).")
-                            Text("2. Enable **'Local network communication'** (or set to 'All Controls').")
-                            Text("3. In DeskOrbit, click **'Scan Local Wi-Fi'** or **'Add by IP'** to immediately control your bulb over UDP 38899.")
-                            Text("4. Enjoy ultra-fast <10ms response times without internet or cloud round-trips.")
+                            Text("1. In the **WiZ App**, go to **Settings** → **Integrations** → **Local Integrations**.")
+                            Text("2. Tap the export button to generate the 15-minute download link, and open it to save the `.json` file.")
+                            Text("3. In DeskOrbit, click **'Import WiZ JSON'** (or Auto-Import from Downloads).")
+                            Text("4. DeskOrbit extracts your **Home Security Key** (`udp_signing_key`) and Home ID, automatically finds your bulb's IP address, and signs all local UDP packets via HMAC-SHA256 for zero-lag local control!")
                         }
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
@@ -650,7 +768,7 @@ private struct WizIntegrationGuideSheetView: View {
                                 .font(.system(size: 12, weight: .bold))
                         }
 
-                        Text("When a bulb is both on your local Wi-Fi and linked to SmartThings, DeskOrbit automatically operates in **Hybrid mode**:\n• Commands are sent locally over Wi-Fi for instantaneous, flicker-free dimming and color tuning.\n• State updates are synchronized with Samsung SmartThings Cloud so your mobile app and smart home automations stay perfectly in sync!")
+                        Text("When a bulb is both on your local Wi-Fi and linked to SmartThings, DeskOrbit automatically operates in **Hybrid mode**:\n• Commands are sent locally over Wi-Fi with cryptographic HMAC-SHA256 signing for instantaneous, flicker-free dimming and color tuning.\n• State updates are synchronized with Samsung SmartThings Cloud so your mobile app and smart home automations stay perfectly in sync!")
                             .font(.system(size: 11))
                             .foregroundColor(.secondary)
                             .padding(10)
@@ -662,6 +780,6 @@ private struct WizIntegrationGuideSheetView: View {
             }
         }
         .padding(20)
-        .frame(width: 520, height: 460)
+        .frame(width: 520, height: 470)
     }
 }
