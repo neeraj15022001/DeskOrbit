@@ -4,7 +4,9 @@
 
 ### Core Platform
 - **Programming Language:** Swift 5.9 / Swift 6
-- **UI Frameworks:** SwiftUI + AppKit (`NSStatusItem`, `NSPopover`, `NSWindow`, `NSApplication`)
+- **UI Frameworks & Design System:** SwiftUI + AppKit (`NSStatusItem`, `NSPopover`, `NSWindow`, `NSApplication`, `NSVisualEffectView`)
+  - **macOS Golden Gate 27 Liquid Glass:** `LiquidGlass.swift` modifier with dynamic vibrancy materials (`.regular`, `.clear`, `.tinted`) and accessibility contrast degradation.
+  - **Tactile Sliders:** `ControlSliders.swift` (`OrbitCapsuleSlider` & `OrbitKelvinSlider`) featuring 28pt Control Center capsule geometry and transient interaction specular sheen.
 - **Target OS:** macOS 14.0+ (Sonoma, Sequoia)
 - **Architectures:** Universal Binary (`arm64` Apple Silicon & `x86_64` Intel)
 

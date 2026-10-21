@@ -30,6 +30,12 @@ DeskOrbit has reached version **v1.4.0**, achieving full local-first autonomy by
 ### 4. Automatic Dashboard Presentation on Launch
 - **UX Improvement:** DeskOrbit now auto-presents and focuses the full Home-style Dashboard window on launch, while maintaining its lightweight menu bar presence. Clicking the Dock or Spotlight icon also brings the Dashboard to the front.
 
+### 5. Apple HIG Redesign & macOS Golden Gate 27 Liquid Glass
+- **Design Overhaul:** Audited the full application against Apple's Human Interface Guidelines, eliminating micro-type with an uncompromising $\ge 10\text{pt}$ typography floor and $\ge 24\times 24\text{pt}$ / $28\times 28\text{pt}$ control hit frames.
+- **Material Depth System:** Applied Apple's two-layer depth model with Liquid Glass backdrops on floating functional headers, while keeping content cards on calm semantic solid surfaces.
+- **Control Center Sliders:** Replaced default macOS sliders with custom 28pt Control Center tactile capsule sliders (`OrbitCapsuleSlider` & `OrbitKelvinSlider`) featuring dynamic contrast text adaptation and transient interaction specular sheens.
+- **Edge-to-Edge Content:** Extended window views fluidly behind titlebar controls via `window.styleMask.insert(.fullSizeContentView)`.
+
 ---
 
 ## Active Focus & Next Steps

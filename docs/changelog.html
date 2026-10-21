@@ -568,6 +568,7 @@
     <div class="filter-bar">
       <div class="filter-pills">
         <button class="filter-pill active" data-filter="all">All Changes</button>
+        <button class="filter-pill" data-filter="ui">Apple HIG &amp; UI</button>
         <button class="filter-pill" data-filter="lights">Smart Lights</button>
         <button class="filter-pill" data-filter="battery">Power &amp; Battery</button>
         <button class="filter-pill" data-filter="display">Displays</button>
@@ -581,24 +582,59 @@
     <div class="timeline">
 
       <!-- ENTRY: v1.4.0 WiZ v2 Signed UDP & Zero-Cloud Release -->
-      <div class="timeline-node" data-category="lights devops">
+      <div class="timeline-node" data-category="lights devops ui">
         <div class="node-marker"></div>
         <article class="release-card">
           <div class="release-header">
             <div class="version-meta">
-              <span class="version-tag">v1.4.0 — WiZ v2 Signed UDP LAN &amp; Zero-Cloud Architecture</span>
-              <span class="pill-status pill-released">Major Security &amp; Protocol Update</span>
-              <a href="https://github.com/neeraj15022001/DeskOrbit/commit/d6409cf" class="commit-badge" target="_blank" rel="noopener">d6409cf</a>
+              <span class="version-tag">v1.4.0 — WiZ v2 Signed UDP LAN, Apple HIG &amp; Liquid Glass</span>
+              <span class="pill-status pill-released">Major Security, Protocol &amp; UI Update</span>
+              <a href="https://github.com/neeraj15022001/DeskOrbit/commit/0c4241d" class="commit-badge" target="_blank" rel="noopener">0c4241d</a>
             </div>
             <div class="timestamp-box">
               <span>Released:</span>
-              <strong>2026-10-21 22:45:00 IST (+05:30)</strong>
+              <strong>2026-10-21 23:40:00 IST (+05:30)</strong>
             </div>
           </div>
 
           <p class="release-summary">
-            Introduced full <strong>WiZ v2 cryptographic HMAC-SHA256 authenticated UDP pilot control</strong> (port 38899) with dynamic timestamp synchronization for modern WiZ bulb firmware (&ge;1.38.0). Completely eliminated all Samsung SmartThings cloud dependencies and tokens for 100% offline, zero-latency local LAN control, aligned Darwin BSD sockets, and enabled automatic Dashboard presentation on launch.
+            Introduced full <strong>WiZ v2 cryptographic HMAC-SHA256 authenticated UDP pilot control</strong> (port 38899) with dynamic timestamp synchronization for modern WiZ bulb firmware (&ge;1.38.0). Completely eliminated all Samsung SmartThings cloud dependencies and tokens for 100% offline, zero-latency local LAN control. Transformed the entire interface to strictly adhere to the <strong>Apple Human Interface Guidelines (HIG)</strong> and adopted <strong>macOS Golden Gate 27 Liquid Glass</strong> materials with Control Center tactile capsule sliders.
           </p>
+
+          <!-- Group: Apple HIG Redesign & macOS Golden Gate Liquid Glass -->
+          <div class="change-group" data-group="ui">
+            <h3 class="change-group-title" style="color: #38bdf8;">✨ Apple HIG Redesign &amp; macOS Golden Gate Liquid Glass</h3>
+            <ul class="change-list">
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>macOS Golden Gate 27 Liquid Glass Material (<code>LiquidGlass.swift</code>):</strong> Implemented Apple's two-layer depth separation. The floating Dashboard header and WiZ Hub use <code>.liquidGlass(.regular)</code> for dynamic vibrancy and blur over scrolling hardware cards, while maintaining semantic solid content surfaces.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Tactile Control Center Capsule Sliders:</strong> Built custom 28pt full-height capsule track sliders (<code>OrbitCapsuleSlider</code>) with leading icons, continuous drag scrubbing, and dynamic high-contrast text adaptation, paired with a 2200K–6500K spectrum Kelvin slider (<code>OrbitKelvinSlider</code>).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Transient Interactive Sheen:</strong> Sliders take on specular highlights and edge gradients when actively scrubbed or hovered, adhering to Apple HIG material interaction principles.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Strict Typography &amp; Hit Target Floor:</strong> Eradicated 8pt/9pt micro-type across all cards, establishing an uncompromising &ge; 10pt floor, alongside expanded &ge; 24&times;24pt / 28&times;28pt minimum hit targets.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Full-Size Edge-to-Edge Content:</strong> Configured <code>NSWindow</code> with <code>.fullSizeContentView</code> and transparent titlebar, extending content fluidly behind window control buttons.</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Accessibility Degradation:</strong> Dynamic observers for <code>accessibilityDisplayShouldReduceTransparency</code> (substituting opaque fills) and <code>accessibilityDisplayShouldIncreaseContrast</code> (doubling border strokes).</span>
+              </li>
+              <li class="change-item">
+                <span class="change-bullet">•</span>
+                <span><strong>Menu Bar Status Glyph:</strong> Updated template glyph from <code>macmini</code> to standard hardware device controller glyph <code>slider.horizontal.3</code> with active hardware badge count.</span>
+              </li>
+            </ul>
+          </div>
 
           <!-- Group: Smart Lighting -->
           <div class="change-group" data-group="lights">
@@ -653,6 +689,14 @@
           <!-- Micro-Audit Log -->
           <div class="audit-box">
             <div class="audit-title">Timestamped Actions</div>
+            <div class="audit-row">
+              <span class="audit-time">2026-10-21 23:40:00 IST</span>
+              <span class="audit-desc">Implemented macOS Golden Gate 27 Liquid Glass material, transient interaction sheen, and fullSizeContentView (commit 0c4241d)</span>
+            </div>
+            <div class="audit-row">
+              <span class="audit-time">2026-10-21 23:25:00 IST</span>
+              <span class="audit-desc">Redesigned UI according to Apple HIG, added Control Center capsule sliders, typography floor &ge;10pt (commit 780b7bb)</span>
+            </div>
             <div class="audit-row">
               <span class="audit-time">2026-10-21 22:45:00 IST</span>
               <span class="audit-desc">Complete removal of SmartThings, added Darwin sin_len socket alignment, auto-presentation of Dashboard (commit d6409cf)</span>

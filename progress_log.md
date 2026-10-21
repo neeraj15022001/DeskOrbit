@@ -65,7 +65,7 @@ This log documents the chronological development history, engineering decisions,
   - Extracts formatted release notes directly from `CHANGELOG.md`.
   - Builds `DeskOrbit.app` on `macos-14` runner, injects `CFBundleShortVersionString` into `Info.plist`, builds compressed `.dmg` and `.zip`, computes SHA256 checksums, and publishes assets via `softprops/action-gh-release@v2`.
 
-### Phase 6: Comprehensive Apple HIG UI Redesign
+### Phase 6: Comprehensive Apple HIG UI Redesign (Commit `780b7bb`)
 - **Design Review:** Audited entire codebase against Apple's Human Interface Guidelines (`typography.md`, `accessibility.md`, `materials.md`, `color.md`, `the-menu-bar.md`, `sliders.md`).
 - **Core Improvements Implemented:**
   1. **Control Center Style Capsule Sliders:** Implemented `OrbitCapsuleSlider` (28pt full-height capsule track with integrated iconography, dynamic contrast text, and direct drag scrubbing) and `OrbitKelvinSlider` (2200K–6500K spectrum track with draggable marker).
@@ -74,7 +74,7 @@ This log documents the chronological development history, engineering decisions,
   4. **Home-Style Card Aesthetics:** Applied continuous 14pt rounded corners (`RoundedRectangle(cornerRadius: 14, style: .continuous)`), elevated semantic control background fills, and subtle hover animations.
   5. **Menu Bar Status Item:** Updated template icon from `macmini` to `slider.horizontal.3` (macOS standard hardware controller glyph).
 
-### Phase 7: macOS Golden Gate 27 & Liquid Glass Material Integration
+### Phase 7: macOS Golden Gate 27 & Liquid Glass Material Integration (Commit `0c4241d`)
 - **Liquid Glass Architecture (`LiquidGlass.swift`):**
   1. **Floating Functional Layer:** The Dashboard top header floats with Liquid Glass (`.regular` variant), creating realistic background vibrancy and scroll-edge diffusion over scrolling hardware cards.
   2. **Transient Control Sheen:** Interactive capsule sliders take on specular highlights and edge gradients when actively dragged or hovered.

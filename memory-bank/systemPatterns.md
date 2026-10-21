@@ -102,3 +102,22 @@ DeskOrbit applies a three-tiered fallback pattern for display brightness:
   }
   ```
 - Implements `applicationShouldHandleReopen:hasVisibleWindows:` ensuring clicks on the application icon in Finder, Dock, or Spotlight reliably reopen and focus the Dashboard.
+
+
+### 6. Apple HIG & macOS Golden Gate 27 Liquid Glass Architecture (`LiquidGlass.swift`, `ControlSliders.swift`)
+
+#### Two-Layer Depth Separation Model:
+- **Floating Functional Layer:** Navigation bars, toolbars, modal headers, and floating sidebars utilize Liquid Glass (`.liquidGlass(.regular)`) with background vibrancy and edge-diffusion over scrolling cards.
+- **Content Layer:** Device cards, lists, and main window backdrops use semantic solid fills (`NSColor.controlBackgroundColor` and subtle borders), eliminating "glass on glass" visual muddiness.
+- **Transient Interaction Sheen:** In the content layer, tactile capsule sliders take on specular highlights and specular edge gradients exclusively during active mouse hover and scrubbing.
+
+#### Control Center Tactile Sliders (`OrbitCapsuleSlider` & `OrbitKelvinSlider`):
+- **Capsule Track Geometry:** Continuous 28pt capsule track with dynamic leading SF Symbol glyphs and high-contrast text adaptation.
+- **Continuous Gesture Scrubbing:** Direct drag gesture computes normalized fraction `(drag.location.x / totalWidth)` with instant haptic responsiveness.
+- **Kelvin Spectrum Track:** Maps 2200K–6500K across an amber-to-cyan gradient track with a high-contrast draggable capsule thumb.
+
+#### Accessibility Floor & Edge-to-Edge Windowing:
+- **Strict Typography Floor:** All labels and readouts are $\ge 10\text{pt}$, completely eradicating sub-10pt micro-type.
+- **Hit Targets:** Buttons and interactive icons maintain minimum $\ge 24\times 24\text{pt}$ / $28\times 28\text{pt}$ frames.
+- **Accessibility Degradation:** Automatic observation of `accessibilityDisplayShouldReduceTransparency` (swapping blur for opaque fill) and `accessibilityDisplayShouldIncreaseContrast` (doubling border strokes).
+- **Edge-to-Edge Content:** Configured `window.styleMask.insert(.fullSizeContentView)` and `window.titlebarAppearsTransparent = true` in `AppDelegate.swift`.

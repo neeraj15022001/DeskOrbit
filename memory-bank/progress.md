@@ -15,14 +15,16 @@ DeskOrbit is fully implemented, verified on physical hardware, packaged as a uni
 | **Power & Battery** | `BatteryPowerService.swift`, `BatteryPowerCardView.swift` | **Complete** | IOKit `AppleSmartBattery`, real-time input wattage (`IPDInputPower`), USB-PD profiles, health % vs design capacity. |
 | **Audio Subsystem** | `AudioService.swift`, `AudioCardView.swift` | **Complete** | CoreAudio HAL `VirtualMainVolume`, mute toggling, output route switching, hardware listener block. |
 | **Bluetooth & Storage** | `DeviceManager.swift`, `DeviceCardView.swift` | **Complete** | Peripheral battery levels via IOKit, disk volume gauges and safe unmounting via `DiskArbitration`. |
-| **UI & Shell** | `AppDelegate.swift`, `MenuBarView.swift`, `DashboardView.swift` | **Complete** | 590px dual-column popover, auto-presented Dashboard window on launch, Dock reopen handler. |
+| **UI & Shell** | `AppDelegate.swift`, `MenuBarView.swift`, `DashboardView.swift`, `LiquidGlass.swift`, `ControlSliders.swift` | **Complete** | Liquid Glass materials, Control Center capsule sliders, Apple HIG &ge;10pt typography floor, 590px popover, auto-presented Dashboard, Dock reopen. |
 | **CI/CD & Packaging** | `bundle_app.sh`, `create_dmg.sh`, `.github/workflows/` | **Complete** | Universal binary (`arm64` + `x86_64`), compressed `.dmg` generation, GitHub Actions CI & Pages. |
 
 ---
 
 ## Release History
 
-### [v1.4.0] — 2026-10-21 (Commit `d6409cf`)
+### [v1.4.0] — 2026-10-21 (Commits `d6409cf`, `780b7bb`, `0c4241d`)
+- **macOS Golden Gate 27 Liquid Glass (Commit `0c4241d`):** Added Liquid Glass material modifier (`LiquidGlass.swift`) with dynamic blur backdrops on floating headers, transient interaction specular sheens on scrubbers, accessibility fallbacks, and `.fullSizeContentView` window integration.
+- **Apple HIG Interface Redesign (Commit `780b7bb`):** Redesigned entire UI adhering to Apple Human Interface Guidelines, built tactile Control Center capsule sliders (`OrbitCapsuleSlider` & `OrbitKelvinSlider`), and strictly standardized typography floor &ge;10pt.
 - **WiZ v2 Cryptographic UDP Engine:** Implemented HMAC-SHA256 signing over sorted JSON keys, dynamic monotonic timestamp (`ts`) synchronization, and Darwin BSD `sockaddr_in.sin_len` socket initialization.
 - **Home Structure Auto-Importer:** Scans `~/Downloads` for downloaded WiZ configuration JSONs to automatically configure `home_id`, `udp_signing_key`, and bulb mappings.
 - **Purged SmartThings Cloud Integration:** Removed all cloud REST endpoints, personal access tokens, and rate limit freezes in favor of 100% local UDP.
