@@ -65,6 +65,15 @@ This log documents the chronological development history, engineering decisions,
   - Extracts formatted release notes directly from `CHANGELOG.md`.
   - Builds `DeskOrbit.app` on `macos-14` runner, injects `CFBundleShortVersionString` into `Info.plist`, builds compressed `.dmg` and `.zip`, computes SHA256 checksums, and publishes assets via `softprops/action-gh-release@v2`.
 
+### Phase 6: Comprehensive Apple HIG UI Redesign
+- **Design Review:** Audited entire codebase against Apple's Human Interface Guidelines (`typography.md`, `accessibility.md`, `materials.md`, `color.md`, `the-menu-bar.md`, `sliders.md`).
+- **Core Improvements Implemented:**
+  1. **Control Center Style Capsule Sliders:** Implemented `OrbitCapsuleSlider` (28pt full-height capsule track with integrated iconography, dynamic contrast text, and direct drag scrubbing) and `OrbitKelvinSlider` (2200K–6500K spectrum track with draggable marker).
+  2. **Accessibility Type Floor:** Eliminated all 8pt/9pt micro-type across cards, badges, and readouts, establishing a strict $\ge 10\text{pt}$ floor across macOS components.
+  3. **Hit Targets:** Expanded buttons and interactive icons to $\ge 24\times 24\text{pt}$ / $28\times 28\text{pt}$ minimum frames.
+  4. **Home-Style Card Aesthetics:** Applied continuous 14pt rounded corners (`RoundedRectangle(cornerRadius: 14, style: .continuous)`), elevated semantic control background fills, and subtle hover animations.
+  5. **Menu Bar Status Item:** Updated template icon from `macmini` to `slider.horizontal.3` (macOS standard hardware controller glyph).
+
 ---
 
 ## 2026-10-13: Smart Lighting Subsystem Launch (v1.2.0)

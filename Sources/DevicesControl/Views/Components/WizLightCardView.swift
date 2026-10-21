@@ -7,6 +7,7 @@ public struct WizLightCardView: View {
 
     @State private var isShowingLinkIPPopover: Bool = false
     @State private var linkIPInput: String = ""
+    @State private var isHovered: Bool = false
 
     public init(manager: DeviceManager = .shared, light: WizLightItem, isCompact: Bool = false) {
         self.manager = manager
@@ -19,45 +20,45 @@ public struct WizLightCardView: View {
     }
 
     public var body: some View {
-        VStack(alignment: .leading, spacing: isCompact ? 10 : 14) {
+        VStack(alignment: .leading, spacing: isCompact ? 10 : 12) {
             // MARK: - Header
             HStack(spacing: 10) {
                 ZStack {
                     Circle()
-                        .fill(bulbGlowColor.opacity(light.isOn ? 0.25 : 0.08))
-                        .frame(width: isCompact ? 36 : 44, height: isCompact ? 36 : 44)
+                        .fill(bulbGlowColor.opacity(light.isOn ? 0.22 : 0.08))
+                        .frame(width: isCompact ? 36 : 42, height: isCompact ? 36 : 42)
 
                     Image(systemName: light.isOn ? "lightbulb.fill" : "lightbulb.slash")
-                        .font(.system(size: isCompact ? 18 : 22, weight: .semibold))
+                        .font(.system(size: isCompact ? 17 : 20, weight: .semibold))
                         .foregroundColor(light.isOn ? bulbGlowColor : .secondary)
-                        .shadow(color: light.isOn ? bulbGlowColor.opacity(0.6) : .clear, radius: 8)
+                        .shadow(color: light.isOn ? bulbGlowColor.opacity(0.4) : .clear, radius: 6)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 6) {
                         Text(light.name)
-                            .font(.system(size: isCompact ? 12 : 14, weight: .bold))
+                            .font(.system(size: isCompact ? 12 : 13, weight: .semibold))
                             .lineLimit(1)
 
                         if !light.isReachable {
                             Text("Offline")
-                                .font(.system(size: 8, weight: .semibold))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Color.red.opacity(0.15))
+                                .font(.system(size: 10, weight: .medium))
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(Color.red.opacity(0.12))
                                 .foregroundColor(.red)
-                                .cornerRadius(4)
+                                .clipShape(Capsule())
                         }
                     }
 
-                    // Dynamic Connection Mode Badge & Subtitle
+                    // Connection Badge & Subtitle
                     HStack(spacing: 4) {
                         Image(systemName: light.connectionBadgeIcon)
-                            .font(.system(size: 8))
-                            .foregroundColor(badgeColor)
+                            .font(.system(size: 9))
+                            .foregroundColor(.green)
 
                         Text(connectionSubtitleText)
-                            .font(.system(size: isCompact ? 9 : 10, design: .monospaced))
+                            .font(.system(size: 10, design: .monospaced))
                             .foregroundColor(.secondary)
                             .lineLimit(1)
 
@@ -66,31 +67,31 @@ public struct WizLightCardView: View {
                                 isShowingLinkIPPopover = true
                             }) {
                                 Text("+ Set IP")
-                                    .font(.system(size: 9, weight: .bold))
+                                    .font(.system(size: 10, weight: .bold))
                                     .foregroundColor(.accentColor)
                             }
                             .buttonStyle(.plain)
                             .popover(isPresented: $isShowingLinkIPPopover) {
-                                VStack(alignment: .leading, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 10) {
                                     Text("Set Local Wi-Fi IP")
-                                        .font(.system(size: 12, weight: .bold))
-                                    Text("Enter your bulb's LAN IP for direct signed UDP control (port 38899).")
-                                        .font(.system(size: 10))
+                                        .font(.system(size: 13, weight: .semibold))
+                                    Text("Enter your bulb's LAN IP address for direct authenticated UDP control (port 38899).")
+                                        .font(.system(size: 11))
                                         .foregroundColor(.secondary)
 
                                     TextField("e.g. 192.168.1.6", text: $linkIPInput)
                                         .textFieldStyle(.roundedBorder)
-                                        .controlSize(.small)
+                                        .controlSize(.regular)
 
                                     HStack {
                                         Button("Cancel") {
                                             isShowingLinkIPPopover = false
                                         }
-                                        .controlSize(.small)
+                                        .controlSize(.regular)
 
                                         Spacer()
 
-                                        Button("Set IP") {
+                                        Button("Save IP") {
                                             manager.linkLocalIPToBulb(bulbId: light.id, ip: linkIPInput) { success in
                                                 if success {
                                                     isShowingLinkIPPopover = false
@@ -99,12 +100,12 @@ public struct WizLightCardView: View {
                                             }
                                         }
                                         .buttonStyle(.borderedProminent)
-                                        .controlSize(.small)
+                                        .controlSize(.regular)
                                         .disabled(linkIPInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                                     }
                                 }
-                                .padding(12)
-                                .frame(width: 250)
+                                .padding(14)
+                                .frame(width: 270)
                             }
                         }
                     }
@@ -117,16 +118,16 @@ public struct WizLightCardView: View {
                     manager.toggleLightPower(light: light)
                 }) {
                     Image(systemName: "power")
-                        .font(.system(size: isCompact ? 12 : 14, weight: .bold))
+                        .font(.system(size: isCompact ? 12 : 13, weight: .bold))
                         .foregroundColor(light.isOn ? .white : .secondary)
-                        .padding(isCompact ? 6 : 8)
+                        .frame(width: isCompact ? 28 : 32, height: isCompact ? 28 : 32)
                         .background(light.isOn ? Color.green : Color.primary.opacity(0.08))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help(light.isOn ? "Turn Off" : "Turn On")
+                .help(light.isOn ? "Turn Off Light" : "Turn On Light")
 
-                // Option Menu (Remove / Details)
+                // Overflow Options Menu
                 if !isCompact {
                     Menu {
                         if light.hasLocalConnection {
@@ -149,66 +150,63 @@ public struct WizLightCardView: View {
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 12))
+                            .font(.system(size: 14))
                             .foregroundColor(.secondary)
+                            .frame(width: 24, height: 24)
                     }
                     .buttonStyle(.plain)
                     .menuIndicator(.hidden)
                 }
             }
 
-            // MARK: - Brightness Slider
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Image(systemName: "sun.max.fill")
-                        .font(.system(size: 10))
-                        .foregroundColor(.secondary)
-                    Text("Brightness")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text("\(light.brightness)%")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundColor(light.isOn ? .primary : .secondary)
-                }
-
-                Slider(value: Binding(
-                    get: { Double(light.brightness) },
-                    set: { manager.setLightBrightness(light: light, brightness: Int($0)) }
-                ), in: 10...100)
-                .controlSize(isCompact ? .mini : .small)
-                .disabled(!light.isOn)
-                .opacity(light.isOn ? 1.0 : 0.4)
-            }
+            // MARK: - Control Center Style Brightness Capsule Slider
+            OrbitCapsuleSlider(
+                icon: "sun.max.fill",
+                label: "Brightness",
+                value: Binding(
+                    get: { Float(light.brightness) / 100.0 },
+                    set: { manager.setLightBrightness(light: light, brightness: Int(round($0 * 100.0))) }
+                ),
+                tint: light.isOn ? (isTemperatureMode ? .orange : bulbGlowColor) : .gray,
+                isEnabled: light.isOn
+            )
 
             // MARK: - Color & Temperature Controls
             if light.isOn {
                 VStack(alignment: .leading, spacing: 8) {
-                    // Mode Selector Pill Buttons
-                    HStack(spacing: 8) {
+                    // Segmented Mode Selector Pills
+                    HStack(spacing: 6) {
                         Button(action: {
                             manager.activeLightModes[light.id] = "Colors"
                         }) {
-                            Text("Colors")
-                                .font(.system(size: 10, weight: !isTemperatureMode ? .bold : .medium))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(!isTemperatureMode ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.04))
-                                .foregroundColor(!isTemperatureMode ? .accentColor : .secondary)
-                                .cornerRadius(6)
+                            HStack(spacing: 4) {
+                                Image(systemName: "paintpalette.fill")
+                                    .font(.system(size: 10))
+                                Text("Colors")
+                                    .font(.system(size: 11, weight: !isTemperatureMode ? .semibold : .medium))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(!isTemperatureMode ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.04))
+                            .foregroundColor(!isTemperatureMode ? .accentColor : .secondary)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
 
                         Button(action: {
                             manager.activeLightModes[light.id] = "Whites"
                         }) {
-                            Text("Whites")
-                                .font(.system(size: 10, weight: isTemperatureMode ? .bold : .medium))
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 4)
-                                .background(isTemperatureMode ? Color.accentColor.opacity(0.2) : Color.primary.opacity(0.04))
-                                .foregroundColor(isTemperatureMode ? .accentColor : .secondary)
-                                .cornerRadius(6)
+                            HStack(spacing: 4) {
+                                Image(systemName: "sun.dust.fill")
+                                    .font(.system(size: 10))
+                                Text("Whites")
+                                    .font(.system(size: 11, weight: isTemperatureMode ? .semibold : .medium))
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(isTemperatureMode ? Color.accentColor.opacity(0.18) : Color.primary.opacity(0.04))
+                            .foregroundColor(isTemperatureMode ? .accentColor : .secondary)
+                            .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
 
@@ -218,7 +216,7 @@ public struct WizLightCardView: View {
                     if !isTemperatureMode {
                         HStack(spacing: 8) {
                             // Native macOS RGB Color Picker
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 ColorPicker("", selection: Binding(
                                     get: {
                                         Color(
@@ -238,19 +236,18 @@ public struct WizLightCardView: View {
                                 ), supportsOpacity: false)
                                 .labelsHidden()
                                 .frame(width: isCompact ? 22 : 26, height: isCompact ? 22 : 26)
-                                .help("Custom RGB Color Picker (Wheel, Sliders, Palette)")
+                                .help("Custom Color Wheel & Palette")
 
                                 Text(String(format: "#%02X%02X%02X", light.red, light.green, light.blue))
-                                    .font(.system(size: isCompact ? 8 : 9, weight: .bold, design: .monospaced))
+                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                     .foregroundColor(.secondary)
                             }
-                            .padding(.horizontal, 6)
+                            .padding(.horizontal, 7)
                             .padding(.vertical, 3)
-                            .background(Color.primary.opacity(0.06))
+                            .background(Color.primary.opacity(0.05))
                             .cornerRadius(8)
 
-                            Divider()
-                                .frame(height: isCompact ? 18 : 22)
+                            Divider().frame(height: 20)
 
                             // RGB Preset Swatches
                             ScrollView(.horizontal, showsIndicators: false) {
@@ -264,7 +261,7 @@ public struct WizLightCardView: View {
                                                 .frame(width: isCompact ? 18 : 22, height: isCompact ? 18 : 22)
                                                 .overlay(
                                                     Circle()
-                                                        .stroke(Color.white.opacity(isPresetSelected(preset) ? 0.9 : 0.1), lineWidth: isPresetSelected(preset) ? 2 : 1)
+                                                        .stroke(Color.white.opacity(isPresetSelected(preset) ? 0.9 : 0.15), lineWidth: isPresetSelected(preset) ? 2 : 1)
                                                 )
                                         }
                                         .buttonStyle(.plain)
@@ -275,31 +272,33 @@ public struct WizLightCardView: View {
                             }
                         }
                     } else {
-                        // White Temperature Slider (Kelvin)
+                        // White Temperature Spectrum Slider (Kelvin)
                         VStack(spacing: 4) {
                             HStack {
-                                Text("Warm (2200K)")
-                                    .font(.system(size: 9))
+                                Text("2200K (Warm)")
+                                    .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.orange)
                                 Spacer()
                                 Text("\(light.colorTemperature ?? 2700)K")
-                                    .font(.system(size: 10, weight: .bold, design: .rounded))
+                                    .font(.system(size: 11, weight: .semibold, design: .monospaced))
                                     .foregroundColor(.primary)
                                 Spacer()
-                                Text("Cool (6500K)")
-                                    .font(.system(size: 9))
+                                Text("6500K (Cool)")
+                                    .font(.system(size: 10, weight: .medium))
                                     .foregroundColor(.cyan)
                             }
 
-                            Slider(value: Binding(
-                                get: { Double(light.colorTemperature ?? 2700) },
-                                set: { manager.setLightTemperature(light: light, kelvin: Int($0)) }
-                            ), in: 2200...6500)
-                            .controlSize(isCompact ? .mini : .small)
+                            OrbitKelvinSlider(
+                                kelvin: Binding(
+                                    get: { light.colorTemperature ?? 2700 },
+                                    set: { manager.setLightTemperature(light: light, kelvin: $0) }
+                                ),
+                                isEnabled: light.isOn
+                            )
                         }
                     }
 
-                    // Quick Scenes Bar (Non-compact only)
+                    // Quick Scenes Bar
                     if !isCompact {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 6) {
@@ -320,27 +319,31 @@ public struct WizLightCardView: View {
                 .transition(.opacity)
             }
         }
-        .padding(isCompact ? 10 : 14)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(bulbGlowColor.opacity(light.isOn ? 0.35 : 0.08), lineWidth: 1)
+        .padding(isCompact ? 12 : 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(isHovered ? 0.08 : 0.03), radius: isHovered ? 6 : 2, x: 0, y: isHovered ? 2 : 1)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    light.isOn ? bulbGlowColor.opacity(isHovered ? 0.35 : 0.18) : (isHovered ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06)),
+                    lineWidth: 1
+                )
+        )
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 
     // MARK: - Helpers
 
     private var connectionSubtitleText: String {
         if light.hasLocalConnection {
-            return "WiZ v2 Local: \(light.ip):38899"
+            return "\(light.ip):38899"
         } else {
-            return "WiZ v2 Local (Unassigned IP)"
+            return "Local (Unassigned IP)"
         }
-    }
-
-    private var badgeColor: Color {
-        return .green
     }
 
     private var bulbGlowColor: Color {
@@ -386,22 +389,25 @@ private struct SceneChip: View {
     let sceneId: Int
     let light: WizLightItem
     @ObservedObject var manager: DeviceManager
+    @State private var isHovering: Bool = false
 
     var body: some View {
         Button(action: {
             manager.setLightScene(light: light, sceneId: sceneId)
         }) {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 Image(systemName: icon)
-                    .font(.system(size: 8))
+                    .font(.system(size: 9))
                 Text(name)
-                    .font(.system(size: 9, weight: .medium))
+                    .font(.system(size: 10, weight: .medium))
             }
-            .padding(.horizontal, 6)
+            .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.primary.opacity(0.04))
-            .cornerRadius(6)
+            .background(isHovering ? Color.primary.opacity(0.08) : Color.primary.opacity(0.04))
+            .foregroundColor(.primary)
+            .clipShape(Capsule())
         }
         .buttonStyle(.plain)
+        .onHover { isHovering = $0 }
     }
 }

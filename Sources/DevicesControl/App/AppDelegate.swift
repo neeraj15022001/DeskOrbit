@@ -26,7 +26,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         if let button = statusItem?.button {
             let config = NSImage.SymbolConfiguration(pointSize: 13, weight: .regular)
-            if let image = NSImage(systemSymbolName: "macmini", accessibilityDescription: "DeskOrbit")?.withSymbolConfiguration(config) {
+            if let image = NSImage(systemSymbolName: "slider.horizontal.3", accessibilityDescription: "DeskOrbit")?.withSymbolConfiguration(config) {
                 image.isTemplate = true
                 button.image = image
             } else {

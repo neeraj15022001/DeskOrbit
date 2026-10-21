@@ -9,11 +9,13 @@ public struct DeviceCardView<Content: View>: View {
     let badgeColor: Color
     @ViewBuilder let content: () -> Content
 
+    @State private var isHovered: Bool = false
+
     public init(
         title: String,
         subtitle: String,
         iconName: String,
-        iconColor: Color = .blue,
+        iconColor: Color = .accentColor,
         badgeText: String? = nil,
         badgeColor: Color = .secondary,
         @ViewBuilder content: @escaping () -> Content
@@ -29,19 +31,21 @@ public struct DeviceCardView<Content: View>: View {
 
     public var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top) {
+            // Header Row
+            HStack(alignment: .center, spacing: 10) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(iconColor.opacity(0.15))
+                        .fill(iconColor.opacity(0.14))
                         .frame(width: 38, height: 38)
                     Image(systemName: iconName)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundColor(iconColor)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.primary)
                         .lineLimit(1)
                     Text(subtitle)
                         .font(.system(size: 11))
@@ -54,25 +58,31 @@ public struct DeviceCardView<Content: View>: View {
                 if let badge = badgeText {
                     Text(badge)
                         .font(.system(size: 10, weight: .medium))
-                        .padding(.horizontal, 6)
+                        .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(badgeColor.opacity(0.15))
+                        .background(badgeColor.opacity(0.12))
                         .foregroundColor(badgeColor)
                         .clipShape(Capsule())
                 }
             }
 
+            // Card Content
             content()
         }
         .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(NSColor.controlBackgroundColor))
-                .shadow(color: Color.black.opacity(0.04), radius: 3, x: 0, y: 1)
+                .shadow(color: Color.black.opacity(isHovered ? 0.08 : 0.03), radius: isHovered ? 6 : 2, x: 0, y: isHovered ? 2 : 1)
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.primary.opacity(0.06), lineWidth: 1)
+                .stroke(
+                    isHovered ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06),
+                    lineWidth: 1
+                )
         )
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 }

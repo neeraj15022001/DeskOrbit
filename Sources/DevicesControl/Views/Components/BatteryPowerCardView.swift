@@ -4,6 +4,8 @@ public struct BatteryPowerCardView: View {
     @ObservedObject var manager: DeviceManager
     public var isCompact: Bool = false
 
+    @State private var isHovered: Bool = false
+
     public init(manager: DeviceManager = .shared, isCompact: Bool = false) {
         self.manager = manager
         self.isCompact = isCompact
@@ -20,19 +22,18 @@ public struct BatteryPowerCardView: View {
                 ZStack {
                     Circle()
                         .fill(batteryColor.opacity(0.15))
-                        .frame(width: isCompact ? 38 : 46, height: isCompact ? 38 : 46)
+                        .frame(width: isCompact ? 36 : 42, height: isCompact ? 36 : 42)
 
                     Image(systemName: batterySymbolName)
-                        .font(.system(size: isCompact ? 18 : 22, weight: .semibold))
+                        .font(.system(size: isCompact ? 17 : 20, weight: .semibold))
                         .foregroundColor(batteryColor)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(alignment: .firstTextBaseline, spacing: 6) {
                         Text("\(info.currentPercentage)%")
-                            .font(.system(size: isCompact ? 22 : 26, weight: .bold, design: .rounded))
+                            .font(.system(size: isCompact ? 20 : 24, weight: .bold, design: .rounded))
                             .foregroundColor(.primary)
-                            .fixedSize(horizontal: true, vertical: false)
 
                         if info.isExternalConnected {
                             HStack(spacing: 3) {
@@ -40,21 +41,19 @@ public struct BatteryPowerCardView: View {
                                     .font(.system(size: 9, weight: .bold))
                                 Text(chargingPillText)
                                     .font(.system(size: 10, weight: .bold))
-                                    .fixedSize(horizontal: true, vertical: false)
                             }
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(info.isCharging ? Color.green.opacity(0.18) : Color.blue.opacity(0.18))
-                            .foregroundColor(info.isCharging ? .green : .cyan)
-                            .cornerRadius(5)
+                            .background(info.isCharging ? Color.green.opacity(0.15) : Color.accentColor.opacity(0.15))
+                            .foregroundColor(info.isCharging ? .green : .accentColor)
+                            .clipShape(Capsule())
                         }
                     }
 
                     Text(info.statusDescription)
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
                 }
 
                 Spacer()
@@ -66,7 +65,7 @@ public struct BatteryPowerCardView: View {
                     }
                 }) {
                     HStack(spacing: 3) {
-                        Text(manager.isAdvancedPowerView ? "Basic" : "Advanced")
+                        Text(manager.isAdvancedPowerView ? "Basic" : "Details")
                             .font(.system(size: 10, weight: .semibold))
                         Image(systemName: manager.isAdvancedPowerView ? "chevron.up" : "chevron.down")
                             .font(.system(size: 9, weight: .bold))
@@ -75,7 +74,7 @@ public struct BatteryPowerCardView: View {
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
                     .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(6)
+                    .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
@@ -83,11 +82,11 @@ public struct BatteryPowerCardView: View {
             // MARK: - Level Bar
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.primary.opacity(0.08))
-                        .frame(height: 7)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.primary.opacity(0.06))
+                        .frame(height: 6)
 
-                    RoundedRectangle(cornerRadius: 4)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
                         .fill(
                             LinearGradient(
                                 colors: [batteryColor, batteryColor.opacity(0.8)],
@@ -95,14 +94,14 @@ public struct BatteryPowerCardView: View {
                                 endPoint: .trailing
                             )
                         )
-                        .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(info.currentPercentage) / 100.0)), height: 7)
+                        .frame(width: max(0, min(geo.size.width, geo.size.width * CGFloat(info.currentPercentage) / 100.0)), height: 6)
                 }
             }
-            .frame(height: 7)
+            .frame(height: 6)
 
-            // MARK: - Metrics Grid (Organized in 2 rows to avoid clipping)
-            VStack(spacing: 8) {
-                HStack(spacing: 8) {
+            // MARK: - Metrics Grid
+            VStack(spacing: 6) {
+                HStack(spacing: 6) {
                     MetricChip(
                         icon: "heart.fill",
                         iconColor: .pink,
@@ -119,7 +118,7 @@ public struct BatteryPowerCardView: View {
                 }
 
                 if info.adapter.isConnected {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 6) {
                         MetricChip(
                             icon: "bolt.fill",
                             iconColor: .yellow,
@@ -139,7 +138,7 @@ public struct BatteryPowerCardView: View {
 
             // MARK: - Advanced Detailed Telemetry (Expanded)
             if manager.isAdvancedPowerView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 10) {
                     Divider().opacity(0.3)
 
                     // Sub-section 1: Power Adapter & Real-time Input
@@ -174,13 +173,13 @@ public struct BatteryPowerCardView: View {
                         }
                         .padding(8)
                         .background(Color.primary.opacity(0.03))
-                        .cornerRadius(7)
+                        .cornerRadius(8)
                     }
 
                     // Sub-section 2: USB-PD Power Profiles
                     if !info.adapter.pdProfiles.isEmpty {
                         VStack(alignment: .leading, spacing: 5) {
-                            Text("USB-PD Voltage Profiles:")
+                            Text("USB-PD Profiles:")
                                 .font(.system(size: 10, weight: .semibold))
                                 .foregroundColor(.secondary)
 
@@ -191,16 +190,16 @@ public struct BatteryPowerCardView: View {
                                             .font(.system(size: 10, weight: .bold))
                                             .foregroundColor(.primary)
                                         Text(String(format: "%.1fA", profile.maxCurrentAmps))
-                                            .font(.system(size: 8))
+                                            .font(.system(size: 9))
                                             .foregroundColor(.secondary)
                                         Text(String(format: "%.0fW", profile.maxPowerWatts))
-                                            .font(.system(size: 8, weight: .bold))
+                                            .font(.system(size: 9, weight: .bold))
                                             .foregroundColor(.accentColor)
                                     }
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 4)
                                     .background(Color.accentColor.opacity(0.08))
-                                    .cornerRadius(5)
+                                    .cornerRadius(6)
                                 }
                             }
                         }
@@ -208,7 +207,7 @@ public struct BatteryPowerCardView: View {
 
                     // Sub-section 3: Battery Capacities & Health
                     VStack(alignment: .leading, spacing: 6) {
-                        Label("Battery Capacities & Specs", systemImage: "battery.100")
+                        Label("Battery Capacities & Physical Sensors", systemImage: "battery.100")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.secondary)
 
@@ -246,18 +245,26 @@ public struct BatteryPowerCardView: View {
                         }
                         .padding(8)
                         .background(Color.primary.opacity(0.03))
-                        .cornerRadius(7)
+                        .cornerRadius(8)
                     }
                 }
             }
         }
-        .padding(isCompact ? 12 : 16)
-        .background(Color(NSColor.controlBackgroundColor))
-        .cornerRadius(12)
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        .padding(isCompact ? 12 : 14)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(NSColor.controlBackgroundColor))
+                .shadow(color: Color.black.opacity(isHovered ? 0.08 : 0.03), radius: isHovered ? 6 : 2, x: 0, y: isHovered ? 2 : 1)
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .stroke(
+                    isHovered ? Color.primary.opacity(0.12) : Color.primary.opacity(0.06),
+                    lineWidth: 1
+                )
+        )
+        .onHover { isHovered = $0 }
+        .animation(.easeOut(duration: 0.15), value: isHovered)
     }
 
     // MARK: - Helpers
@@ -304,10 +311,10 @@ private struct MetricChip: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 3) {
                 Image(systemName: icon)
-                    .font(.system(size: 8, weight: .bold))
+                    .font(.system(size: 9, weight: .bold))
                     .foregroundColor(iconColor)
                 Text(label)
-                    .font(.system(size: 9, weight: .semibold))
+                    .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
             }
@@ -315,12 +322,12 @@ private struct MetricChip: View {
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundColor(.primary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.8)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
+        .padding(7)
         .background(Color.primary.opacity(0.04))
-        .cornerRadius(6)
+        .cornerRadius(7)
     }
 }
 

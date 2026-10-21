@@ -19,39 +19,72 @@ public struct MenuBarView: View {
         VStack(spacing: 0) {
             // MARK: - Top Header Bar
             HStack(spacing: 8) {
-                Image(systemName: "macmini")
-                    .font(.system(size: 14, weight: .bold))
+                Image(systemName: "slider.horizontal.3")
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.accentColor)
+
                 Text("DeskOrbit")
                     .font(.system(size: 13, weight: .bold))
 
+                // Active Devices Capsule
+                let activeCount = manager.displays.count + manager.smartLights.count + manager.bluetoothDevices.filter { $0.isConnected }.count
+                Text("\(activeCount) active")
+                    .font(.system(size: 10, weight: .semibold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.12))
+                    .foregroundColor(.accentColor)
+                    .clipShape(Capsule())
+
                 Spacer()
 
+                // Refresh Button (28x28 minimum hit target)
                 Button(action: { manager.refreshAll() }) {
                     Image(systemName: "arrow.clockwise")
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .help("Refresh Devices")
+                .help("Refresh All Connected Hardware")
 
+                // Dashboard Button
                 Button(action: onOpenDashboard) {
-                    HStack(spacing: 3) {
+                    HStack(spacing: 4) {
                         Image(systemName: "macwindow")
+                            .font(.system(size: 10))
                         Text("Dashboard")
+                            .font(.system(size: 11, weight: .medium))
                     }
-                    .font(.system(size: 10, weight: .semibold))
                 }
                 .buttonStyle(.bordered)
-                .controlSize(.mini)
+                .controlSize(.small)
                 .help("Open Full DeskOrbit Dashboard Window")
 
-                Button(action: onQuit) {
-                    Image(systemName: "xmark.circle")
-                        .font(.system(size: 12))
+                // Overflow / App Actions Menu
+                Menu {
+                    Button(action: onOpenDashboard) {
+                        Label("Open Dashboard Window", systemImage: "macwindow")
+                    }
+                    Button(action: { manager.scanLocalWiZLights() }) {
+                        Label("Scan Local WiZ Bulbs", systemImage: "wifi")
+                    }
+                    Button(action: { manager.refreshAll() }) {
+                        Label("Refresh Hardware", systemImage: "arrow.clockwise")
+                    }
+                    Divider()
+                    Button(role: .destructive, action: onQuit) {
+                        Label("Quit DeskOrbit", systemImage: "power")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                        .font(.system(size: 13))
                         .foregroundColor(.secondary)
+                        .frame(width: 24, height: 24)
                 }
                 .buttonStyle(.plain)
-                .help("Quit DeskOrbit")
+                .menuIndicator(.hidden)
+                .help("App Options")
             }
             .padding(.horizontal, 14)
             .padding(.top, 12)
@@ -63,7 +96,7 @@ public struct MenuBarView: View {
             if let status = manager.statusMessage {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle.fill")
-                        .foregroundColor(.blue)
+                        .foregroundColor(.accentColor)
                         .font(.system(size: 11))
                     Text(status)
                         .font(.system(size: 11))
@@ -71,8 +104,8 @@ public struct MenuBarView: View {
                     Spacer()
                 }
                 .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(Color.blue.opacity(0.1))
+                .padding(.vertical, 6)
+                .background(Color.accentColor.opacity(0.08))
             }
 
             // MARK: - Side-by-Side Main Content
@@ -94,39 +127,42 @@ public struct MenuBarView: View {
                             }
 
                             if manager.displays.isEmpty {
-                                Text("No displays detected")
+                                Text("No external displays detected")
                                     .font(.system(size: 11))
                                     .foregroundColor(.secondary)
+                                    .padding(.vertical, 4)
                             } else {
                                 ForEach(manager.displays) { display in
-                                    VStack(alignment: .leading, spacing: 4) {
+                                    VStack(alignment: .leading, spacing: 6) {
                                         HStack {
                                             Text(display.name)
-                                                .font(.system(size: 11, weight: .medium))
+                                                .font(.system(size: 12, weight: .medium))
                                                 .lineLimit(1)
                                             if display.isMain {
                                                 Text("Main")
-                                                    .font(.system(size: 8, weight: .bold))
-                                                    .padding(.horizontal, 4)
+                                                    .font(.system(size: 10, weight: .semibold))
+                                                    .padding(.horizontal, 5)
                                                     .padding(.vertical, 1)
-                                                    .background(Color.accentColor.opacity(0.15))
+                                                    .background(Color.accentColor.opacity(0.12))
                                                     .foregroundColor(.accentColor)
                                                     .clipShape(Capsule())
                                             }
                                             Spacer()
-                                            Text("\(Int(display.brightness * 100))%")
-                                                .font(.system(size: 11, weight: .medium, design: .monospaced))
                                         }
 
-                                        Slider(value: Binding(
-                                            get: { Double(display.brightness) },
-                                            set: { manager.setDisplayBrightness(displayID: display.id, brightness: Float($0)) }
-                                        ), in: 0.0...1.0)
-                                        .controlSize(.small)
+                                        OrbitCapsuleSlider(
+                                            icon: "sun.max.fill",
+                                            label: "Luminance",
+                                            value: Binding(
+                                                get: { display.brightness },
+                                                set: { manager.setDisplayBrightness(displayID: display.id, brightness: $0) }
+                                            ),
+                                            tint: .accentColor
+                                        )
                                     }
-                                    .padding(8)
+                                    .padding(10)
                                     .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-                                    .cornerRadius(8)
+                                    .cornerRadius(10)
                                 }
                             }
                         }
@@ -138,39 +174,37 @@ public struct MenuBarView: View {
                                     .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                HStack(spacing: 6) {
-                                    Button(action: { manager.scanLocalWiZLights() }) {
-                                        HStack(spacing: 3) {
-                                            if manager.wizLightService.isScanningLocal {
-                                                ProgressView().controlSize(.mini)
-                                            } else {
-                                                Image(systemName: "wifi")
-                                            }
-                                            Text("Scan")
+                                Button(action: { manager.scanLocalWiZLights() }) {
+                                    HStack(spacing: 4) {
+                                        if manager.wizLightService.isScanningLocal {
+                                            ProgressView().controlSize(.mini)
+                                        } else {
+                                            Image(systemName: "wifi")
                                         }
-                                        .font(.system(size: 9, weight: .semibold))
+                                        Text("Scan")
                                     }
-                                    .buttonStyle(.plain)
-                                    .foregroundColor(.green)
-                                    .help("Scan Local Wi-Fi (UDP 38899)")
+                                    .font(.system(size: 10, weight: .semibold))
                                 }
+                                .buttonStyle(.plain)
+                                .foregroundColor(.green)
+                                .help("Scan Local Wi-Fi (UDP 38899)")
                             }
 
                             if manager.smartLights.isEmpty {
                                 HStack {
-                                    Text("No lights configured")
-                                        .font(.system(size: 10))
+                                    Text("No WiZ bulbs configured")
+                                        .font(.system(size: 11))
                                         .foregroundColor(.secondary)
                                     Spacer()
                                     Button(action: onOpenDashboard) {
                                         Text("Setup")
-                                            .font(.system(size: 9, weight: .bold))
+                                            .font(.system(size: 10, weight: .bold))
                                     }
-                                    .controlSize(.mini)
+                                    .controlSize(.small)
                                 }
-                                .padding(8)
+                                .padding(10)
                                 .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-                                .cornerRadius(8)
+                                .cornerRadius(10)
                             } else {
                                 ForEach(manager.smartLights) { light in
                                     WizLightCardView(manager: manager, light: light, isCompact: true)
@@ -194,25 +228,29 @@ public struct MenuBarView: View {
                             }
 
                             if let defaultDevice = manager.defaultAudioOutput {
-                                VStack(spacing: 6) {
-                                    HStack {
+                                VStack(spacing: 8) {
+                                    HStack(spacing: 8) {
                                         Button(action: { manager.toggleAudioMute(device: defaultDevice) }) {
                                             Image(systemName: defaultDevice.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill")
-                                                .font(.system(size: 12))
+                                                .font(.system(size: 13, weight: .semibold))
                                                 .foregroundColor(defaultDevice.isMuted ? .red : .accentColor)
+                                                .frame(width: 28, height: 28)
+                                                .background(Color.primary.opacity(0.04))
+                                                .clipShape(Circle())
                                         }
                                         .buttonStyle(.plain)
+                                        .help(defaultDevice.isMuted ? "Unmute Audio" : "Mute Audio")
 
-                                        Slider(value: Binding(
-                                            get: { Double(defaultDevice.volume) },
-                                            set: { manager.setAudioVolume(deviceID: defaultDevice.id, volume: Float($0)) }
-                                        ), in: 0.0...1.0)
-                                        .controlSize(.small)
-                                        .disabled(defaultDevice.isMuted)
-
-                                        Text("\(Int(defaultDevice.volume * 100))%")
-                                            .font(.system(size: 11, weight: .medium, design: .monospaced))
-                                            .frame(width: 32, alignment: .trailing)
+                                        OrbitCapsuleSlider(
+                                            icon: defaultDevice.isMuted ? "speaker.slash.fill" : "speaker.wave.2.fill",
+                                            label: "Volume",
+                                            value: Binding(
+                                                get: { defaultDevice.volume },
+                                                set: { manager.setAudioVolume(deviceID: defaultDevice.id, volume: $0) }
+                                            ),
+                                            tint: defaultDevice.isMuted ? .gray : .accentColor,
+                                            isEnabled: !defaultDevice.isMuted
+                                        )
                                     }
 
                                     let outputs = manager.audioDevices.filter { $0.isOutput }
@@ -234,9 +272,9 @@ public struct MenuBarView: View {
                                         .controlSize(.small)
                                     }
                                 }
-                                .padding(8)
+                                .padding(10)
                                 .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-                                .cornerRadius(8)
+                                .cornerRadius(10)
                             } else {
                                 Text("No audio output device found")
                                     .font(.system(size: 11))
@@ -266,7 +304,7 @@ public struct MenuBarView: View {
                                 ForEach(connectedBT) { device in
                                     HStack {
                                         Image(systemName: "headphones")
-                                            .font(.system(size: 11))
+                                            .font(.system(size: 12))
                                             .foregroundColor(.accentColor)
                                         Text(device.name)
                                             .font(.system(size: 11, weight: .medium))
@@ -275,22 +313,22 @@ public struct MenuBarView: View {
                                         if let battery = device.batteryPercent {
                                             HStack(spacing: 3) {
                                                 Image(systemName: batteryIcon(for: battery))
-                                                    .font(.system(size: 10))
+                                                    .font(.system(size: 11))
                                                     .foregroundColor(batteryColor(for: battery))
                                                 Text("\(battery)%")
-                                                    .font(.system(size: 10, weight: .medium, design: .monospaced))
+                                                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
                                             }
                                         }
                                         Button(action: { manager.toggleBluetooth(device: device) }) {
                                             Text("Disconnect")
-                                                .font(.system(size: 9))
+                                                .font(.system(size: 10))
                                         }
                                         .controlSize(.mini)
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 5)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-                                    .cornerRadius(6)
+                                    .cornerRadius(8)
                                 }
                             }
                         }
@@ -307,29 +345,30 @@ public struct MenuBarView: View {
 
                                 ForEach(manager.storageDevices) { storage in
                                     HStack {
-                                        Image(systemName: "externaldrive.badge.icloud")
-                                            .font(.system(size: 12))
+                                        Image(systemName: "externaldrive.fill")
+                                            .font(.system(size: 13))
                                             .foregroundColor(.orange)
                                         VStack(alignment: .leading, spacing: 1) {
                                             Text(storage.name)
                                                 .font(.system(size: 11, weight: .medium))
                                                 .lineLimit(1)
                                             Text("\(storage.formattedFree) free of \(storage.formattedTotal)")
-                                                .font(.system(size: 9))
+                                                .font(.system(size: 10))
                                                 .foregroundColor(.secondary)
                                         }
                                         Spacer()
                                         Button(action: { manager.ejectStorage(device: storage) }) {
                                             Image(systemName: "eject.fill")
-                                                .font(.system(size: 10))
+                                                .font(.system(size: 11))
+                                                .frame(width: 24, height: 24)
                                         }
                                         .buttonStyle(.plain)
                                         .help("Eject \(storage.name)")
                                     }
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 5)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
                                     .background(Color(NSColor.controlBackgroundColor).opacity(0.6))
-                                    .cornerRadius(6)
+                                    .cornerRadius(8)
                                 }
                             }
                         }
@@ -339,7 +378,7 @@ public struct MenuBarView: View {
                 }
                 .frame(width: 310)
 
-                // Vertical Divider between left and right
+                // Vertical Divider between columns
                 Divider()
 
                 // RIGHT COLUMN: Battery & Power Charging
@@ -366,11 +405,11 @@ public struct MenuBarView: View {
                 }
                 .frame(width: 280)
             }
-            .frame(height: 420)
+            .frame(height: 430)
 
             Divider()
 
-            // MARK: - Footer action
+            // MARK: - Footer Action Bar
             Button(action: onOpenDashboard) {
                 HStack {
                     Text("Open Full Dashboard")
@@ -381,7 +420,7 @@ public struct MenuBarView: View {
                 }
                 .foregroundColor(.accentColor)
                 .padding(.horizontal, 14)
-                .padding(.vertical, 9)
+                .padding(.vertical, 10)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
