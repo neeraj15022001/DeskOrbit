@@ -48,21 +48,26 @@ All contributors and maintainers are expected to adhere to our [Code of Conduct]
 
 ```
 Sources/DevicesControl/
-├── main.swift              # App entry point
+├── main.swift                        # App entry point
 ├── App/
-│   └── AppDelegate.swift   # NSStatusItem, NSPopover, and NSWindow lifecycle
+│   └── AppDelegate.swift             # NSStatusItem, NSPopover, and NSWindow lifecycle
 ├── Models/
-│   └── DeviceModels.swift  # Unified data contracts for Displays, Audio, Bluetooth, Storage
+│   └── DeviceModels.swift            # Unified data contracts for Displays, Audio, Bluetooth, Storage
 ├── Services/
-│   ├── AudioService.swift    # CoreAudio device enumeration, volume/mute, default routing
-│   ├── DisplayService.swift  # IOAVService DDC/CI, GPU Gamma tables, DisplayServices
-│   ├── BluetoothService.swift# IOBluetooth peripheral monitoring and battery level query
-│   ├── StorageService.swift  # DiskArbitration & NSWorkspace mounted drive manager
-│   └── DeviceManager.swift   # Central @ObservableObject coordinator
+│   ├── AudioService.swift            # CoreAudio device enumeration, volume/mute, default routing
+│   ├── DisplayService.swift          # IOAVService DDC/CI, GPU Gamma tables, DisplayServices
+│   ├── BatteryPowerService.swift     # IOKit AppleSmartBattery telemetry & USB-PD wattage
+│   ├── BluetoothService.swift        # IOBluetooth peripheral monitoring and battery level query
+│   ├── StorageService.swift          # DiskArbitration & NSWorkspace mounted drive manager
+│   ├── WizLightService.swift         # WiZ v2 UDP HMAC-SHA256 authenticated socket pilot engine
+│   ├── VoiceAssistantService.swift   # SFSpeechRecognizer & AVAudioEngine voice capture
+│   ├── OrbitNaturalLanguageParser.swift # Hybrid Apple FoundationModels & circadian curve parser
+│   ├── DeskOrbitAppIntents.swift     # Siri AI voice intents & AppShortcutsProvider
+│   └── DeviceManager.swift           # Central @ObservableObject coordinator
 └── Views/
-    ├── MenuBarView.swift     # Popover quick controls
-    ├── DashboardView.swift   # Full macOS window dashboard
-    └── Components/           # Modular tile cards and sliders
+    ├── MenuBarView.swift             # Popover quick controls
+    ├── DashboardView.swift           # Full macOS window dashboard
+    └── Components/                   # Modular tile cards, sliders, and voice bar
 ```
 
 ---

@@ -23,6 +23,19 @@ It lives unobtrusively in your **Menu Bar** for rapid glance-and-adjust controls
 
 ## Key Features
 
+### 🧠 On-Device Apple Foundation Model & Voice Assistant
+- **Apple Intelligence Core (`FoundationModels.framework`):** Integrates Apple's on-device `SystemLanguageModel` running directly on Apple Silicon Neural Engine for natural, conversational device orchestration with zero cloud data transmission.
+- **Solar & Circadian Lighting:** Automatically calculates and syncs your smart lights to match the sun's natural color temperature and intensity across sunrise, midday peak, golden hour, and night.
+- **Thematic Pop Culture & Mood Presets:** Intelligently maps cultural themes (*"theme of Money Heist"*, *"Blade Runner cyberpunk"*, *"Matrix"*, *"relaxing"*, *"deep focus"*) into harmonious lighting parameters.
+- **Hands-Free Voice Assistant:** Tap the microphone or waveform bar to speak natural commands for smart lighting, master volume, and display brightness.
+- **Siri AI & Apple Shortcuts:** Native App Intents bundled with `Metadata.appintents` for system-wide Siri orchestration.
+
+### 💡 Smart Lighting (WiZ v2 Local Hub)
+- **Zero-Cloud & 100% Private:** Eliminates cloud latency and third-party account requirements by using direct, authenticated local UDP port `38899`.
+- **HMAC-SHA256 Cryptographic Signing:** Full support for modern WiZ firmware (&ge;1.38.0) with real-time timestamp synchronization.
+- **Self-Healing Network Routing:** Automatically detects dual-band Wi-Fi ARP expirations (`errno=64/65`) and synchronously re-primes routing tables for instant packet delivery.
+- **Full Spectrum & Presets:** Dual-mode controls for 16M RGB colors, 2200K–6500K tunable white Kelvin, and built-in dynamic scenes.
+
 ### 🖥️ Display Brightness & Contrast
 - **Native Apple Displays:** Controls backlight natively on MacBook screens, Apple Studio Displays, and Pro Display XDR via `DisplayServices`.
 - **Apple Silicon DDC/CI (`IOAVService`):** Communicates directly with external monitor microcontrollers over I²C (`0x37`) using VCP opcode `0x10` (as popularized by [MonitorControl](https://github.com/MonitorControl/MonitorControl) and [BetterDisplay](https://github.com/waydabber/BetterDisplay)).
@@ -65,11 +78,15 @@ DeskOrbit/
         ├── Models/
         │   └── DeviceModels.swift   # Strongly-typed device models
         ├── Services/
-        │   ├── AudioService.swift   # CoreAudio hardware bindings & listeners
-        │   ├── DisplayService.swift # DDC/CI (IOAVService), Gamma LUT, DisplayServices
-        │   ├── BluetoothService.swift # IOBluetooth & IOKit power source battery monitor
-        │   ├── StorageService.swift # DiskArbitration & NSWorkspace volume manager
-        │   └── DeviceManager.swift  # Unified coordinator and reactive state manager
+        │   ├── VoiceAssistantService.swift    # On-device speech recognition & Apple Foundation Model coordinator
+        │   ├── OrbitNaturalLanguageParser.swift # Hybrid AI parser: Circadian math, thematic engine & LLM session
+        │   ├── DeskOrbitAppIntents.swift      # Siri AI & Apple Shortcuts AppIntent definitions
+        │   ├── WizLightService.swift          # WiZ v2 signed UDP engine with cross-band self-healing
+        │   ├── AudioService.swift             # CoreAudio hardware bindings & listeners
+        │   ├── DisplayService.swift           # DDC/CI (IOAVService), Gamma LUT, DisplayServices
+        │   ├── BluetoothService.swift         # IOBluetooth & IOKit power source battery monitor
+        │   ├── StorageService.swift           # DiskArbitration & NSWorkspace volume manager
+        │   └── DeviceManager.swift            # Unified coordinator and reactive state manager
         └── Views/
             ├── MenuBarView.swift    # Compact popover interface
             ├── DashboardView.swift  # Modular home-style grid dashboard
@@ -80,6 +97,8 @@ DeskOrbit/
 
 ## Quick Start & Installation
 
+For a full step-by-step setup walkthrough including WiZ v2 smart bulb pairing, Siri AI intents, and troubleshooting, read our **[Quick Start Guide](QUICKSTART.md)** or visit the **[Interactive Web Quick Start](https://neeraj15022001.github.io/DeskOrbit/quickstart.html)**.
+
 ### Option 1: Run the Prebuilt App Bundle
 Double-click `DeskOrbit.app` inside the repository:
 ```bash
@@ -89,17 +108,17 @@ open DeskOrbit.app
 ### Option 2: Build From Source
 You only need macOS Command Line Tools or Xcode:
 ```bash
-git clone https://github.com/<your-username>/DeskOrbit.git
+git clone https://github.com/neeraj15022001/DeskOrbit.git
 cd DeskOrbit
 swift build
 swift run
 ```
 
 ### Option 3: Package Standalone `.app`
-To generate an optimized release `.app` bundle:
+To generate an optimized release `.app` bundle with embedded Mach-O Info.plist and App Intents:
 ```bash
 ./bundle_app.sh
-open DeskOrbit.app
+open /Applications/DeskOrbit.app
 ```
 
 ---

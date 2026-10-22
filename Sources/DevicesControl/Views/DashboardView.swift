@@ -124,7 +124,12 @@ public struct DashboardView: View {
                     }
                     .padding(.horizontal, 24)
                     .padding(.top, 18)
-                    .padding(.bottom, 12)
+                    .padding(.bottom, 8)
+
+                    // Apple Intelligence Voice Assistant Bar
+                    VoiceAssistantBarView()
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 12)
 
                     // WiZ Local Control Hub Status Banner
                     if manager.activeCategory == .lights || (manager.activeCategory == .all && !manager.smartLights.isEmpty) {

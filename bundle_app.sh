@@ -4,8 +4,18 @@ set -e
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 cd "$DIR"
 
+echo "🛑 Stopping any running instances of DeskOrbit..."
+killall DeskOrbit 2>/dev/null || true
+pkill -f "DeskOrbit.app/Contents/MacOS/DeskOrbit" 2>/dev/null || true
+sleep 0.5
+
 echo "🔨 Building DeskOrbit (Release)..."
-swift build -c release --disable-sandbox --cache-path "/tmp/swiftpm_cache"
+CONST_VALS_DIR="/tmp/deskorbit_const_vals"
+mkdir -p "$CONST_VALS_DIR"
+swift build -c release \
+    -Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "$DIR/Info.plist" \
+    -Xswiftc -emit-const-values-path -Xswiftc "$CONST_VALS_DIR/DeskOrbit.swiftconstvalues" \
+    --disable-sandbox --cache-path "/tmp/swiftpm_cache"
 
 BINARY_PATH=$(find "$DIR/.build" -name "DeskOrbit" -type f -perm +111 | grep -i "release" | head -n 1)
 
@@ -24,6 +34,43 @@ mkdir -p "$MACOS" "$RESOURCES"
 
 cp "$BINARY_PATH" "$MACOS/DeskOrbit"
 chmod +x "$MACOS/DeskOrbit"
+
+echo "🧠 Extracting App Intents metadata for Siri AI & Shortcuts..."
+python3 - << 'PYEOF'
+import os, subprocess, glob
+
+sources = [os.path.abspath(f) for f in glob.glob("Sources/**/*.swift", recursive=True)]
+with open("/tmp/deskorbit_sources.txt", "w") as f:
+    f.write("\n".join(sources))
+
+const_file = "/tmp/deskorbit_const_vals/DeskOrbit.swiftconstvalues"
+if not os.path.exists(const_file):
+    candidates = glob.glob(".build/**/DeskOrbit*.swiftconstvalues", recursive=True)
+    if candidates:
+        const_file = os.path.abspath(candidates[0])
+
+with open("/tmp/deskorbit_consts.txt", "w") as f:
+    f.write(const_file)
+
+sdk = subprocess.check_output(["xcrun", "--show-sdk-path"]).decode().strip()
+toolchain = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
+out_dir = "/Users/neerajgupta/Desktop/DeskOrbit/DeskOrbit.app/Contents/Resources"
+
+cmd = [
+    "xcrun", "appintentsmetadataprocessor",
+    "--output", out_dir,
+    "--toolchain-dir", toolchain,
+    "--module-name", "DeskOrbit",
+    "--sdk-root", sdk,
+    "--xcode-version", "16.0",
+    "--platform-family", "macOS",
+    "--deployment-target", "14.0",
+    "--target-triple", "arm64-apple-macos14.0",
+    "--source-file-list", "/tmp/deskorbit_sources.txt",
+    "--swift-const-vals-list", "/tmp/deskorbit_consts.txt"
+]
+subprocess.run(cmd, check=False)
+PYEOF
 
 if [ -f "$DIR/Info.plist" ]; then
     cp "$DIR/Info.plist" "$CONTENTS/Info.plist"
@@ -49,6 +96,12 @@ if [ -f "$DIR/AppIcon_1024.png" ]; then
     }
     ' 2>/dev/null || true
 fi
+
+# Clean resource forks/detritus and sign bundle so macOS TCC respects Info.plist entitlements/privacy strings
+dot_clean "$APP_BUNDLE"
+find "$APP_BUNDLE" -exec xattr -c {} + 2>/dev/null || true
+echo "🔏 Signing bundle with ad-hoc identity..."
+codesign --force --deep --sign - "$APP_BUNDLE"
 
 echo "✅ Successfully built and packaged DeskOrbit.app!"
 echo "📍 Location: $APP_BUNDLE"

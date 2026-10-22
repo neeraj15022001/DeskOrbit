@@ -129,12 +129,16 @@ public final class DeviceManager: ObservableObject {
 
     // MARK: - Smart Light Controls (Philips WiZ)
 
+    public func setLightPower(light: WizLightItem, isOn: Bool) {
+        wizLightService.setPower(for: light, isOn: isOn)
+        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
+            smartLights[idx].isOn = isOn
+        }
+    }
+
     public func toggleLightPower(light: WizLightItem) {
         let newState = !light.isOn
-        wizLightService.setPower(for: light, isOn: newState)
-        if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
-            smartLights[idx].isOn = newState
-        }
+        setLightPower(light: light, isOn: newState)
     }
 
     public func setLightBrightness(light: WizLightItem, brightness: Int) {
@@ -146,6 +150,7 @@ public final class DeviceManager: ObservableObject {
     }
 
     public func setLightRGBColor(light: WizLightItem, red: Int, green: Int, blue: Int) {
+        activeLightModes[light.id] = "Colors"
         wizLightService.setRGBColor(for: light, red: red, green: green, blue: blue)
         if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
             smartLights[idx].red = red
@@ -157,9 +162,14 @@ public final class DeviceManager: ObservableObject {
     }
 
     public func setLightTemperature(light: WizLightItem, kelvin: Int) {
+        activeLightModes[light.id] = "Whites"
         wizLightService.setColorTemperature(for: light, kelvin: kelvin)
         if let idx = smartLights.firstIndex(where: { $0.id == light.id }) {
             smartLights[idx].colorTemperature = kelvin
+            let rgb = wizLightService.kelvinToRGB(kelvin: kelvin)
+            smartLights[idx].red = rgb.r
+            smartLights[idx].green = rgb.g
+            smartLights[idx].blue = rgb.b
             smartLights[idx].isOn = true
         }
     }

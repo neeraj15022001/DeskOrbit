@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quick Start Guide — DeskOrbit</title>
+  <meta name="description" content="Step-by-step setup guide for DeskOrbit macOS hardware controller, WiZ v2 smart lights, and on-device Foundation Model voice assistant.">
+  <link rel="icon" type="image/png" href="assets/AppIcon_1024.png">
+
+  <!-- Open Graph Meta Tags -->
+  <meta property="og:title" content="DeskOrbit Quick Start &amp; Setup Guide">
+  <meta property="og:description" content="Get started with DeskOrbit in two minutes. Configure WiZ smart lighting, DDC/CI monitor brightness, and Apple Silicon voice control.">
+  <meta property="og:image" content="assets/banner.svg">
+  <meta property="og:type" content="website">
+
+  <style>
+    :root {
+      --bg-main: #070a12;
+      --bg-card: #0e1526;
+      --bg-card-hover: #141d34;
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-hover: rgba(56, 189, 248, 0.3);
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent-cyan: #38bdf8;
+      --accent-blue: #0284c7;
+      --accent-purple: #818cf8;
+      --accent-green: #34d399;
+      --accent-amber: #f59e0b;
+      --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg-main);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      line-height: 1.6;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .glow-sphere-1 {
+      position: absolute;
+      top: -100px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 750px;
+      height: 450px;
+      background: radial-gradient(circle, rgba(2, 132, 199, 0.2) 0%, rgba(99, 102, 241, 0.1) 50%, rgba(7, 10, 18, 0) 75%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 24px;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Navigation */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      background: rgba(7, 10, 18, 0.75);
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.2s ease;
+    }
+
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 70px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text-primary);
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.02em;
+    }
+
+    .logo img {
+      width: 38px;
+      height: 38px;
+      border-radius: 9px;
+      box-shadow: 0 2px 10px rgba(56, 189, 248, 0.25);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.15s ease;
+    }
+
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--text-primary);
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 9999px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-cyan), var(--accent-blue));
+      color: #fff;
+      box-shadow: 0 4px 14px rgba(2, 132, 199, 0.35);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(2, 132, 199, 0.5);
+    }
+
+    /* Page Header */
+    .header-section {
+      padding: 70px 0 40px;
+      text-align: center;
+    }
+
+    .badge-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+      color: var(--accent-cyan);
+      font-size: 0.82rem;
+      font-weight: 600;
+      margin-bottom: 20px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .header-section h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 16px;
+      background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .header-section p {
+      color: var(--text-secondary);
+      font-size: 1.15rem;
+      max-width: 680px;
+      margin: 0 auto;
+    }
+
+    /* Steps Layout */
+    .steps-container {
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+      margin-bottom: 80px;
+    }
+
+    .step-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: 18px;
+      padding: 32px;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+
+    .step-card:hover {
+      border-color: var(--border-hover);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .step-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .step-number {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(56, 189, 248, 0.15), rgba(2, 132, 199, 0.15));
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      color: var(--accent-cyan);
+      font-size: 1.2rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .step-title-group h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .step-title-group p {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+    }
+
+    .step-content {
+      color: var(--text-secondary);
+      font-size: 0.98rem;
+    }
+
+    .step-content p {
+      margin-bottom: 16px;
+    }
+
+    .step-content strong {
+      color: var(--text-primary);
+    }
+
+    /* Code & Terminal Blocks */
+    .cli-box {
+      background: #030712;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.88rem;
+      color: #38bdf8;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin: 14px 0 20px;
+    }
+
+    .cli-box code {
+      color: #38bdf8;
+      background: transparent;
+      padding: 0;
+    }
+
+    .copy-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .copy-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      color: #fff;
+    }
+
+    /* Grid of Features / Callouts */
+    .callout-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 20px;
+    }
+
+    .callout-item {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .callout-item h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .callout-item p {
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin-bottom: 0;
+    }
+
+    /* Table styling */
+    .spec-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0;
+      font-size: 0.9rem;
+    }
+
+    .spec-table th, .spec-table td {
+      padding: 12px 14px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .spec-table th {
+      color: var(--text-primary);
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .spec-table td {
+      color: var(--text-secondary);
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid var(--border-color);
+      padding: 40px 0;
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .footer-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      list-style: none;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .footer-links a:hover {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .header-section h1 { font-size: 2.2rem; }
+      .nav-links { display: none; }
+      .step-card { padding: 20px; }
+      .footer-inner { flex-direction: column; align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glow-sphere-1"></div>
+
+  <!-- Navigation -->
+  <nav>
+    <div class="container nav-inner">
+      <a href="index.html" class="logo">
+        <img src="assets/AppIcon_1024.png" alt="DeskOrbit Icon">
+        <span>DeskOrbit</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="index.html#features">Features</a></li>
+        <li><a href="quickstart.html" class="active">Quick Start</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+      </ul>
+      <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+        <span>Download .DMG</span>
+      </a>
+    </div>
+  </nav>
+
+  <!-- Page Header -->
+  <header class="container header-section">
+    <div class="badge-pill">
+      <span>Two-Minute Setup</span>
+    </div>
+    <h1>Quick Start Guide</h1>
+    <p>
+      Everything you need to set up DeskOrbit on macOS: display backlight control, WiZ v2 smart lighting, and on-device Apple Intelligence voice commands.
+    </p>
+  </header>
+
+  <!-- Steps Container -->
+  <main class="container steps-container">
+
+    <!-- Step 1: Installation -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">1</div>
+        <div class="step-title-group">
+          <h2>Installation &amp; Requirements</h2>
+          <p>macOS 14.0 (Sonoma) or macOS 15.0+ (Sequoia) &bull; Universal Binary (Apple Silicon &amp; Intel)</p>
+        </div>
+      </div>
+      <div class="step-content">
+        <p>DeskOrbit is designed with <strong>zero external dependencies</strong> and requires no background daemon or cloud accounts.</p>
+        
+        <p><strong>Option A: Install via Prebuilt .DMG (Recommended)</strong></p>
+        <p>Download <code>DeskOrbit.dmg</code> from our latest release, open it, and drag the app into your <code>/Applications</code> directory.</p>
+        <div style="margin: 12px 0 20px;">
+          <a href="https://github.com/neeraj15022001/DeskOrbit/releases/latest" class="btn btn-primary" target="_blank" rel="noopener">
+            <span>Download DeskOrbit.dmg (v1.5.0)</span>
+          </a>
+        </div>
+
+        <p><strong>Option B: Build from Source with SwiftPM</strong></p>
+        <div class="cli-box">
+          <code>git clone https://github.com/neeraj15022001/DeskOrbit.git &amp;&amp; cd DeskOrbit &amp;&amp; ./bundle_app.sh</code>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('git clone https://github.com/neeraj15022001/DeskOrbit.git && cd DeskOrbit && ./bundle_app.sh'); this.innerText='Copied!';">Copy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: System Permissions -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">2</div>
+        <div class="step-title-group">
+          <h2>Granting System Permissions</h2>
+          <p>Microphone and Speech Recognition for voice control</p>
+        </div>
+      </div>
+      <div class="step-content">
+        <p>To enable the voice assistant and speech recognition, macOS will prompt for access on first launch:</p>
+        <table class="spec-table">
+          <thead>
+            <tr>
+              <th>Permission</th>
+              <th>Usage</th>
+              <th>Privacy Assurance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Microphone</strong></td>
+              <td>Audio capture for in-app Voice Assistant bar.</td>
+              <td>Processed in real-time in memory. Never recorded or stored.</td>
+            </tr>
+            <tr>
+              <td><strong>Speech Recognition</strong></td>
+              <td>Transcribes spoken phrases into text via <code>SFSpeechRecognizer</code>.</td>
+              <td>Runs 100% on-device on Apple Silicon Neural Engine.</td>
+            </tr>
+            <tr>
+              <td><strong>Accessibility</strong></td>
+              <td>Smooth multi-monitor brightness overlays and shortcut detection.</td>
+              <td>Strictly local macOS window management.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 3: WiZ v2 Smart Lights -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">3</div>
+        <div class="step-title-group">
+          <h2>Pairing WiZ v2 Smart Lights</h2>
+          <p>Zero cloud &bull; Local UDP port 38899 &bull; HMAC-SHA256 authenticated</p>
+        </div>
+      </div>
+      <div class="step-content">
+        <p>WiZ bulbs with modern firmware (1.38.0+) require cryptographic message signing. DeskOrbit automates this with zero manual key management:</p>
+        
+        <div class="callout-grid">
+          <div class="callout-item">
+            <h4>📁 Method 1: Auto-Discovery</h4>
+            <p>1. In the WiZ mobile app, tap <strong>Settings &rarr; Home &rarr; Export Settings</strong>.<br>2. Save or AirDrop <code>homeStructure.json</code> to your Mac's <code>~/Downloads</code> folder.<br>3. Launch DeskOrbit. It auto-imports your 16-byte UDP key and Home ID instantly!</p>
+          </div>
+          <div class="callout-item">
+            <h4>⚙️ Method 2: Manual Config</h4>
+            <p>1. Open DeskOrbit Dashboard &rarr; <strong>Smart Lights</strong>.<br>2. Click <strong>Add Bulb</strong>.<br>3. Enter the local IP of your bulb (e.g. <code>192.168.1.2</code>) and paste your 32-character hex key.</p>
+          </div>
+        </div>
+
+        <div style="margin-top: 20px; padding: 14px 18px; border-radius: 12px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2);">
+          <strong style="color: var(--accent-cyan);">⚡ Dual-Band Router Self-Healing:</strong>
+          <span style="font-size: 0.92rem;"> If your Mac is on 5GHz and your bulb is on 2.4GHz, routers can drop ARP caches. DeskOrbit includes automatic synchronous ICMP ping probes that self-heal kernel routes on retry without dropping commands!</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 4: Voice Assistant & Siri AI -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">4</div>
+        <div class="step-title-group">
+          <h2>Voice Assistant &amp; Siri AI</h2>
+          <p>Local Apple Silicon Neural Engine &bull; App Intents &bull; Natural Language</p>
+        </div>
+      </div>
+      <div class="step-content">
+        <p>No Apple HomeKit hub or bridge needed! Talk directly to DeskOrbit:</p>
+
+        <div class="callout-grid">
+          <div class="callout-item">
+            <h4>☀️ Circadian Daylight Sync</h4>
+            <p>Say <em>"Match light with daytime"</em> or <em>"Circadian rhythm"</em>. DeskOrbit computes astronomical solar elevation: cool 6000K daylight at noon, gentle 4800K in afternoon, warm 2200K amber at night.</p>
+          </div>
+          <div class="callout-item">
+            <h4>🎬 Thematic Cinematic Presets</h4>
+            <p>Say <em>"Change color to theme of Money Heist"</em> for deep crimson red, <em>"Cyberpunk mode"</em> for neon magenta, or <em>"Matrix green"</em> for terminal green.</p>
+          </div>
+          <div class="callout-item">
+            <h4>🗣️ Siri App Intents</h4>
+            <p>Say <em>"Hey Siri, set light to 80% with DeskOrbit"</em> or <em>"Hey Siri, match lights with daytime in DeskOrbit"</em> hands-free from anywhere on your Mac.</p>
+          </div>
+          <div class="callout-item">
+            <h4>🔊 Named Audio &amp; Display Control</h4>
+            <p>Target specific devices: <em>"Set MacBook speaker volume to 50%"</em>, <em>"Set JBL volume to 80%"</em>, <em>"Mute MacBook"</em>, or <em>"Set display brightness to 70%"</em>. Handles spoken numbers ("fifty", "half") and relative levels.</p>
+          </div>
+          <div class="callout-item">
+            <h4>🧠 Open-Ended Local LLM</h4>
+            <p>Powered by Apple's on-device <code>SystemLanguageModel</code> on macOS Sequoia. Dispatches to <code>audio</code>, <code>display</code>, or <code>light</code> without cross-bleed.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: Diagnostics & Troubleshooting -->
+    <div class="step-card">
+      <div class="step-header">
+        <div class="step-number">5</div>
+        <div class="step-title-group">
+          <h2>Diagnostics &amp; Real-Time Logs</h2>
+          <p>Inspect socket datagrams and hardware telemetry</p>
+        </div>
+      </div>
+      <div class="step-content">
+        <p>DeskOrbit outputs timestamped socket dispatch and hardware activity logs to <code>/tmp/deskorbit.log</code>:</p>
+        <div class="cli-box">
+          <code>tail -f /tmp/deskorbit.log</code>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('tail -f /tmp/deskorbit.log'); this.innerText='Copied!';">Copy</button>
+        </div>
+        <p>To test direct network connectivity to your bulb:</p>
+        <div class="cli-box">
+          <code>ping -c 3 192.168.1.2</code>
+          <button class="copy-btn" onclick="navigator.clipboard.writeText('ping -c 3 192.168.1.2'); this.innerText='Copied!';">Copy</button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="container footer-inner">
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <img src="assets/AppIcon_1024.png" width="24" height="24" style="border-radius: 6px;">
+        <span><strong>DeskOrbit</strong> — Native macOS Peripheral &amp; Hardware Controller.</span>
+      </div>
+      <ul class="footer-links">
+        <li><a href="index.html">Home</a></li>
+        <li><a href="changelog.html">Changelog</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit" target="_blank" rel="noopener">GitHub</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/releases" target="_blank" rel="noopener">Releases</a></li>
+        <li><a href="https://github.com/neeraj15022001/DeskOrbit/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a></li>
+      </ul>
+    </div>
+  </footer>
+
+</body>
+</html>

@@ -52,3 +52,12 @@ DeskOrbit v1.4.0 completely severed the cloud umbilical cord by reverse-engineer
 - WiZ bulbs running firmware `1.38.0+` enforce **HMAC-SHA256 signature verification** on incoming UDP pilot datagrams.
 - DeskOrbit automatically imports the home's 16-byte UDP signing key from WiZ v2 configuration JSON exports and dynamically signs every datagram with the bulb's synchronized monotonic timestamp (`ts`).
 - Result: **Zero cloud dependency, sub-10ms instantaneous response, 100% local operation even when the internet is offline.**
+
+## Siri AI & Local Intelligence: On-Device Foundation Models
+In v1.5.0, DeskOrbit introduced zero-cloud voice and natural language control:
+- **No HomeKit Hardware Bridge Required:** Users who don't have Apple TV, HomePod, or HomeKit-certified accessories can now control their smart lights directly using Siri or the in-app voice assistant.
+- **Apple Silicon Foundation Models:** Leverages Apple's on-device `SystemLanguageModel` (Apple Intelligence) running on the Neural Engine to parse natural language requests:
+  - *Contextual & Thematic:* "Change color to theme of Money Heist" (crimson red), "Cyberpunk vibe" (electric neon), "Matrix green".
+  - *Circadian Daylight Sync:* "Match light with daytime" calculates solar elevation based on current system time and transitions from morning warmth to midday daylight (6000K) and evening amber (2200K).
+  - *Functional:* "Set light to 80% for reading", "turn off lights", "movie night".
+- **Total Privacy:** Audio transcription (`SFSpeechRecognizer`) and LLM inference run entirely on-device with zero telemetry and zero external server round-trips.

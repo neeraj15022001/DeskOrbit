@@ -121,3 +121,46 @@ DeskOrbit applies a three-tiered fallback pattern for display brightness:
 - **Hit Targets:** Buttons and interactive icons maintain minimum $\ge 24\times 24\text{pt}$ / $28\times 28\text{pt}$ frames.
 - **Accessibility Degradation:** Automatic observation of `accessibilityDisplayShouldReduceTransparency` (swapping blur for opaque fill) and `accessibilityDisplayShouldIncreaseContrast` (doubling border strokes).
 - **Edge-to-Edge Content:** Configured `window.styleMask.insert(.fullSizeContentView)` and `window.titlebarAppearsTransparent = true` in `AppDelegate.swift`.
+
+### 7. Voice Assistant & Apple Foundation Models (`VoiceAssistantService.swift`, `OrbitNaturalLanguageParser.swift`)
+DeskOrbit pairs native speech recognition with Apple's on-device Foundation Model runtime (`FoundationModels.framework` / `SystemLanguageModel`):
+- **Dual-Tier Hybrid Parser Architecture:**
+  - **Tier 1 (Instant Local Rules & Circadian Curves):**
+    - Instant regex matching for power (`turn on`, `off`), brightness (`set brightness to 60%`), and Kelvin temperatures (`warm white`, `daylight`, `reading`).
+    - Pre-compiled cinematic & atmospheric presets: *Money Heist* (crimson `#DC143C`), *Cyberpunk* (electric neon cyan/magenta), *Matrix* (matrix green), *Interstellar* (deep space indigo).
+    - Dynamic Solar Circadian Curve: Maps queries like "match light with daytime" or "circadian rhythm" against 5 temporal intervals (dawn, midday 6000K, afternoon 4800K, sunset 3000K, night 2200K amber) based on user's exact system time.
+  - **Tier 2 (On-Device Apple Intelligence):**
+    - Invokes `SystemLanguageModel.default` when available on Apple Silicon running macOS Sequoia.
+    - Guides inference with a multi-device system prompt partitioned across `target: "audio" | "display" | "light"`.
+    - Handles open-ended natural language while strictly isolating audio and display adjustments from lighting mutations.
+    - Zero cloud network calls; 100% private, on-device Neural Engine execution.
+  - **Named Device Resolution Engine (`extractAudioTarget` & `extractDisplayTarget`):**
+    - Dynamically scans active peripherals in `DeviceManager.shared.audioDevices` and `displays`.
+    - Resolves target devices by full name, token overlap (`"JBL"`, `"MacBook"`, `"SA272"`), and hardware synonyms (`"internal"`, `"speaker"`, `"bluetooth"`, `"hdmi"`).
+    - Supports spoken word numbers ("fifty", "half", "max") and relative level scaling (+15% / -15%).
+- **TCC Permission Enforcement for Command Line / SwiftPM Executables:**
+  - `SFSpeechRecognizer` and `AVAudioEngine` enforce TCC checks at Mach-O load time. If the Mach-O binary lacks an embedded `__info_plist` section, macOS raises `SIGABRT` upon microphone activation.
+  - Resolved in `bundle_app.sh` by passing `-Xlinker -sectcreate -Xlinker __TEXT -Xlinker __info_plist -Xlinker "$DIR/Info.plist"` during SwiftPM linking, followed by ad-hoc deep code signing.
+
+### 8. Siri & Shortcuts Integration via App Intents (`DeskOrbitAppIntents.swift`)
+Direct zero-bridge integration with Apple Siri AI and Shortcuts via `AppIntents.framework`:
+- **Native Intents:**
+  - `ToggleDeskOrbitLightIntent`: Toggle power state.
+  - `SetDeskOrbitBrightnessIntent`: Target brightness (1–100%).
+  - `SetDeskOrbitLightColorIntent`: Preset colors (Red, Crimson, Cyberpunk Neon, Green, Blue, Sunset, Candlelight, White).
+  - `SetDeskOrbitCircadianIntent`: Sync lighting with daytime solar curve.
+  - `SetDeskOrbitDisplayBrightnessIntent`: External monitor hardware luminance.
+  - `MuteDeskOrbitAudioIntent`: System master mute control.
+- **AppShortcutsProvider:** Registers automatic Siri phrases (`"Turn on lights in DeskOrbit"`, `"Match lights with daytime in DeskOrbit"`).
+- **Metadata Compilation Pipeline:** SwiftPM does not compile `.appintents` metadata natively. `bundle_app.sh` uses `xcrun appintentsmetadataprocessor` with `-source-file-list` and `-swift-const-vals-list` (produced by `-Xswiftc -emit-const-values-path`) to generate `Contents/Resources/Metadata.appintents`.
+
+### 9. Dual-Band Cross-Band Network Self-Healing ARP Probing (`WizLightService.swift`)
+Dual-band consumer routers (e.g. Airtel, Netgear, TP-Link) route Mac traffic on 5GHz to WiZ bulbs on 2.4GHz:
+- After idle periods, the router's ARP cache for the 2.4GHz target expires, causing the Darwin kernel to drop outgoing UDP packets and raise `EHOSTDOWN (64)` or `EHOSTUNREACH (65)`.
+- **Self-Healing Loop:**
+  - `WizLightService` intercepts `EHOSTDOWN` / `EHOSTUNREACH` in `sendSignedDatagram()`.
+  - Executes a synchronous 150ms ICMP ping probe (`/sbin/ping -c 1 -W 150 <bulbIP>`), forcing the macOS kernel network stack and router to resolve ARP immediately.
+  - Retries socket dispatch on the same function invocation, providing 100% packet delivery without user-facing failures.
+- **SwiftUI Mode Synchronization:**
+  - When setting RGB color via voice or App Intents, `DeviceManager.setLightRGBColor` explicitly sets `activeLightModes[light.id] = "Colors"`.
+  - Prevents mode desynchronization in `WizLightCardView`, ensuring UI sliders and glowing color orbs update instantaneously on the main thread.

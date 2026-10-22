@@ -38,6 +38,19 @@ public struct MenuBarView: View {
 
                 Spacer()
 
+                // Voice Assistant Mic Button
+                Button(action: {
+                    VoiceAssistantService.shared.toggleListening(manager: manager)
+                }) {
+                    Image(systemName: VoiceAssistantService.shared.state == .listening ? "waveform.circle.fill" : "mic.circle.fill")
+                        .font(.system(size: 15))
+                        .foregroundColor(VoiceAssistantService.shared.state == .listening ? .pink : .accentColor)
+                        .frame(width: 24, height: 24)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .help("Speak Voice Command (Apple Intelligence)")
+
                 // Refresh Button (28x28 minimum hit target)
                 Button(action: { manager.refreshAll() }) {
                     Image(systemName: "arrow.clockwise")

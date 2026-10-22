@@ -11,9 +11,18 @@
 - **Architectures:** Universal Binary (`arm64` Apple Silicon & `x86_64` Intel)
 
 ### Low-Level Darwin & C Frameworks
+- **FoundationModels (`FoundationModels.framework`):**
+  - Apple native `SystemLanguageModel.default` running directly on Apple Silicon Neural Engine (macOS Sequoia / Apple Intelligence). Open-ended natural language intent parser to structured JSON.
+- **Speech & Audio Engine (`Speech.framework`, `AVFoundation.framework`):**
+  - Native `SFSpeechRecognizer` real-time audio buffer transcription paired with `AVAudioEngine`.
+  - Embedded `__info_plist` Mach-O binary section compliance for TCC microphone & speech authorization.
+- **AppIntents (`AppIntents.framework`):**
+  - Native Siri AI voice triggers and macOS Shortcuts actions without HomeKit bridges.
+  - Compile-time metadata extraction via `xcrun appintentsmetadataprocessor` producing `Metadata.appintents`.
 - **POSIX BSD Sockets (`sys/socket.h`, `arpa/inet.h`, `netinet/in.h`):**
   - Manages non-blocking UDP communication on port `38899`.
   - Configures `SO_BROADCAST`, `SO_RCVTIMEO`, and Darwin-specific `sockaddr_in.sin_len`.
+  - Kernel ARP self-healing via synchronous ICMP ping for cross-band router traversal (5GHz Mac to 2.4GHz bulb).
 - **CommonCrypto (`CommonCrypto/CommonHMAC.h`):**
   - High-performance SHA-256 HMAC cryptographic signing for WiZ v2 envelope generation.
 - **IOKit & AppleSmartBattery (`IOKit/IOKitLib.h`):**
@@ -50,7 +59,9 @@
 ## Build, Test & Packaging Pipelines
 - **Build Tool:** `swift build -c release --arch arm64 --arch x86_64`
 - **Application Bundle Packaging:** `bundle_app.sh`
-  - Assembles `DeskOrbit.app` with `Info.plist`, vector AppIcon ICNS, and resource assets.
+  - Assembles `DeskOrbit.app` with vector AppIcon ICNS, resource assets, and embedded Mach-O `__info_plist` section.
+  - Extracts and compiles AppIntents metadata via `xcrun appintentsmetadataprocessor` (`Metadata.appintents`).
+  - Cleans extended attributes and applies ad-hoc deep code signing (`codesign --force --deep --sign -`).
 - **Release DMG Generation:** `create_dmg.sh`
   - Produces compressed, distributable `DeskOrbit.dmg` with `/Applications` drag-and-drop symlink.
 - **Continuous Integration (CI):**

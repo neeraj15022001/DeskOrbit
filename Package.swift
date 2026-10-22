@@ -21,7 +21,12 @@ let package = Package(
                 .linkedFramework("IOBluetooth"),
                 .linkedFramework("DiskArbitration"),
                 .linkedFramework("AppKit"),
-                .linkedFramework("SwiftUI")
+                .linkedFramework("SwiftUI"),
+                .linkedFramework("Speech"),
+                .linkedFramework("AVFoundation"),
+                .linkedFramework("NaturalLanguage"),
+                .linkedFramework("AppIntents"),
+                .linkedFramework("FoundationModels")
             ]
         )
     ]

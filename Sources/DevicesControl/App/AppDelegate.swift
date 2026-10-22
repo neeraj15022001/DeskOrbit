@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import AppIntents
 
 public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     public static let shared = AppDelegate()
@@ -15,6 +16,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
         // Open Dashboard window automatically on launch
         openDashboardWindow()
+
+        // Notify macOS system that DeskOrbit app shortcuts and intents are ready
+        if #available(macOS 14.0, *) {
+            DeskOrbitShortcutsProvider.updateAppShortcutParameters()
+        }
     }
 
     public func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {

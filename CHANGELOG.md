@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.5.0] - 2026-10-23
+
+**Release Date & Time:** 2026-10-23 02:00:00 IST (+05:30)  
+**Target OS:** macOS 14.0+ (Sonoma, Sequoia)  
+**Architectures:** Universal (Apple Silicon & Intel)
+
+### Added
+- **On-Device Apple Foundation Model Integration (`FoundationModels.framework`):**
+  - Integrated Apple's native `SystemLanguageModel.default` running locally on the Apple Silicon Neural Engine for creative, context-aware device control.
+  - Generative parsing of open-ended conversational commands into precise RGB, Kelvin, and brightness parameters (e.g., *"light matching rainy cozy cafe"*, *"warm candlelight"*).
+- **Intelligent Voice Assistant & Audio Visualizer:**
+  - On-device speech recognition via `SFSpeechRecognizer` with zero cloud transmission.
+  - Liquid Glass floating waveform visualizer (`VoiceAssistantBarView.swift`) integrated into both the Dashboard and Menu Bar.
+  - Automatic silence detection (1.2s timeout) with instant execution and haptic feedback.
+- **Thematic Presets & Solar Circadian Lighting:**
+  - Real-time astronomical daylight calculation matching sunrise (2700K/40%), morning (4500K/80%), midday peak (5800K/100%), sunset (2800K/60%), and nighttime (2000K/20%).
+  - Pre-cached cultural and cinematic presets: Money Heist Crimson Red (`rgb: 220, 20, 60`), Cyberpunk Neon, Matrix Code Green, Stranger Things Upside Down, Jedi Blue, Sith Red, Cosmic Nebula, and Oceanic Turquoise.
+- **Siri AI & Apple Shortcuts Metadata (`Metadata.appintents`):**
+  - Added `DeskOrbitShortcutsProvider` and 6 App Intents (`TurnLightOnIntent`, `SetBulbBrightnessIntent`, `SetBulbColorIntent`, etc.).
+  - Automated extraction of `Metadata.appintents` during build using `xcrun appintentsmetadataprocessor`.
+- **Mach-O Embedded `__info_plist` Section:**
+  - Configured SwiftPM linker to embed `Info.plist` into the binary's `__TEXT,__info_plist` segment, preventing macOS TCC authorization crashes for microphone and speech recognition.
+- **Self-Healing Sockets & Synchronous ARP Re-Priming:**
+  - Automatic recovery from `errno=64 (EHOSTDOWN)` and `errno=65 (EHOSTUNREACH)` over dual-band Wi-Fi (5GHz Mac to 2.4GHz WiZ bulb) via synchronous ICMP ping re-priming and immediate packet retry.
+
+### Fixed
+- **Audio Device Targeting & Intent Isolation:**
+  - Resolved an issue where commands like *"adjust volume"* without digits failed regex percentage parsing and fell through to the Foundation Model, which previously mapped all unclassified requests to smart lighting presets.
+  - Added specific output device resolution (`extractAudioTarget`) supporting targeted commands (e.g., *"set MacBook speaker volume to 50%"*, *"set JBL volume to 80%"*, *"mute HDMI display"*) matching against active `AudioItem` peripherals.
+  - Added natural language spoken word number recognition (*"fifty"*, *"thirty-five"*, *"half"*, *"max"*) and relative step volume scaling (+15% / -15%).
+  - Multi-target Foundation Model architecture: partitioned on-device `SystemLanguageModel` system prompt and JSON decoding across `target: "audio" | "display" | "light"`.
+- **Explicit Power & Mute State Enforcement:**
+  - Added `DeviceManager.setLightPower(light: WizLightItem, isOn: Bool)` to ensure spoken *"turn on"* or *"turn off"* sets explicit target boolean states instead of inverting state via `toggleLightPower`.
+  - Added explicit boolean state verification for audio mute/unmute commands.
+- **UI State Synchronization in Light Widget:**
+  - Resolved an issue where AI-commanded color changes were applied to the physical bulb but did not switch the widget UI from "Whites" mode to "Colors" mode.
+  - Routed all assistant mutations through `DeviceManager` with automatic `activeLightModes` updates and main-thread `@Published` refreshes.
+- **Build Zombie Process Accumulation:**
+  - Added automatic process cleanup (`killall DeskOrbit`) in `bundle_app.sh` before recompiling to avoid stale socket conflicts during development.
+
+---
+
 ## [1.4.0] - 2026-10-21
 
 **Release Date & Time:** 2026-10-21 22:45:00 IST (+05:30)  

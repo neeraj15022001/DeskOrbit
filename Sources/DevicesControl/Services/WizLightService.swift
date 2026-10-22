@@ -55,6 +55,7 @@ public final class WizLightService: @unchecked Sendable {
 
     private var pollTimer: Timer?
     private var sequenceId: Int = 1
+    private var lastKnownSigTs: Int = 0
     private var localUdpDebounceItems: [String: DispatchWorkItem] = [:]
 
     public init() {
@@ -118,7 +119,7 @@ public final class WizLightService: @unchecked Sendable {
 
                     // Try to resolve current IP from local network ARP table or probe
                     let existingIP = self.lights.first(where: { $0.id == cleanMac || $0.mac.lowercased() == cleanMac })?.ip
-                    let resolvedIP = self.findIPForMAC(mac: cleanMac) ?? (existingIP?.isEmpty == false ? existingIP! : "192.168.1.6")
+                    let resolvedIP = self.findIPForMAC(mac: cleanMac) ?? (existingIP?.isEmpty == false ? existingIP! : "192.168.1.2")
 
                     let item = WizLightItem(
                         id: cleanMac,
@@ -522,7 +523,10 @@ public final class WizLightService: @unchecked Sendable {
         if let idx = lights.firstIndex(where: { $0.id == id }) {
             mutate(&lights[idx])
             saveLights()
-            onLightsChanged?(lights)
+            let updated = lights
+            DispatchQueue.main.async { [weak self] in
+                self?.onLightsChanged?(updated)
+            }
         }
     }
 
@@ -547,6 +551,15 @@ public final class WizLightService: @unchecked Sendable {
             deskOrbitLog("[DeskOrbit WiZ] Dispatching UDP setPilot to \(trimmedIP):38899 -> \(packet)")
             let resp = self.sendUDPUnicast(to: trimmedIP, message: packet, timeoutSeconds: 1.0)
             deskOrbitLog("[DeskOrbit WiZ] Response from \(trimmedIP): \(resp ?? "<no response / timeout>")")
+
+            if let resp = resp, let data = resp.data(using: .utf8),
+               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                if let err = json["error"] as? [String: Any], let ts = err["sigTs"] as? Int {
+                    self.lastKnownSigTs = max(self.lastKnownSigTs, ts)
+                } else if let res = json["result"] as? [String: Any], let ts = res["sigTs"] as? Int {
+                    self.lastKnownSigTs = max(self.lastKnownSigTs, ts)
+                }
+            }
         }
     }
 
@@ -559,7 +572,10 @@ public final class WizLightService: @unchecked Sendable {
             let cleanKey = keyHex.trimmingCharacters(in: .whitespacesAndNewlines)
             if !cleanKey.isEmpty {
                 fullParams["homeId"] = hid
-                fullParams["sigTs"] = Int(Date().timeIntervalSince1970)
+                let nowTs = Int(Date().timeIntervalSince1970)
+                let sigTs = max(self.lastKnownSigTs + 1, nowTs)
+                self.lastKnownSigTs = sigTs
+                fullParams["sigTs"] = sigTs
 
                 let keyData = hexToData(cleanKey)
                 if let jsonData = try? JSONSerialization.data(withJSONObject: fullParams, options: [.sortedKeys]),
@@ -618,6 +634,10 @@ public final class WizLightService: @unchecked Sendable {
             return nil
         }
 
+        if let ts = res["sigTs"] as? Int {
+            self.lastKnownSigTs = max(self.lastKnownSigTs, ts)
+        }
+
         return PilotResult(
             state: res["state"] as? Bool,
             dimming: res["dimming"] as? Int,
@@ -645,48 +665,68 @@ public final class WizLightService: @unchecked Sendable {
         )
     }
 
-    private func sendUDPUnicast(to ip: String, message: String, timeoutSeconds: Double = 1.0) -> String? {
+    private func sendUDPUnicast(to ip: String, message: String, timeoutSeconds: Double = 1.5) -> String? {
         let trimmedIP = ip.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmedIP.isEmpty else { return nil }
 
-        let sock = socket(AF_INET, SOCK_DGRAM, 0)
-        guard sock >= 0 else { return nil }
-        defer { close(sock) }
+        for attempt in 1...2 {
+            errno = 0
+            let sock = socket(AF_INET, SOCK_DGRAM, 0)
+            guard sock >= 0 else { return nil }
+            defer { close(sock) }
 
-        var tv = timeval(
-            tv_sec: Int(timeoutSeconds),
-            tv_usec: Int32((timeoutSeconds.truncatingRemainder(dividingBy: 1.0)) * 1_000_000)
-        )
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
+            var tv = timeval(
+                tv_sec: Int(timeoutSeconds),
+                tv_usec: Int32((timeoutSeconds.truncatingRemainder(dividingBy: 1.0)) * 1_000_000)
+            )
+            setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, socklen_t(MemoryLayout<timeval>.size))
 
-        var addr = sockaddr_in()
-        addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
-        addr.sin_family = sa_family_t(AF_INET)
-        addr.sin_port = udpPort.bigEndian
-        addr.sin_addr.s_addr = inet_addr(trimmedIP)
+            var addr = sockaddr_in()
+            addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
+            addr.sin_family = sa_family_t(AF_INET)
+            addr.sin_port = udpPort.bigEndian
+            addr.sin_addr.s_addr = inet_addr(trimmedIP)
 
-        let sent = message.withCString { cstr in
-            withUnsafePointer(to: &addr) { ptr in
-                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                    sendto(sock, cstr, strlen(cstr), 0, sa, socklen_t(MemoryLayout<sockaddr_in>.size))
+            let sent = message.withCString { cstr in
+                withUnsafePointer(to: &addr) { ptr in
+                    ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                        sendto(sock, cstr, strlen(cstr), 0, sa, socklen_t(MemoryLayout<sockaddr_in>.size))
+                    }
                 }
             }
-        }
 
-        guard sent > 0 else { return nil }
-
-        var buffer = [UInt8](repeating: 0, count: 2048)
-        var srcAddr = sockaddr_in()
-        var srcLen = socklen_t(MemoryLayout<sockaddr_in>.size)
-
-        let received = withUnsafeMutablePointer(to: &srcAddr) { ptr in
-            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
-                recvfrom(sock, &buffer, buffer.count, 0, sa, &srcLen)
+            guard sent > 0 else {
+                let err = errno
+                deskOrbitLog("[DeskOrbit WiZ] sendto failed, errno=\(err) (attempt \(attempt))")
+                if err == EHOSTUNREACH || err == EHOSTDOWN || err == ENETUNREACH {
+                    // Route/ARP temporarily lost, ping synchronously to re-prime kernel ARP table
+                    let p = Process()
+                    p.executableURL = URL(fileURLWithPath: "/sbin/ping")
+                    p.arguments = ["-c", "1", "-W", "150", trimmedIP]
+                    try? p.run()
+                    p.waitUntilExit()
+                    continue
+                }
+                return nil
             }
-        }
 
-        if received > 0 {
-            return String(bytes: buffer[..<received], encoding: .utf8)
+            var buffer = [UInt8](repeating: 0, count: 2048)
+            var srcAddr = sockaddr_in()
+            var srcLen = socklen_t(MemoryLayout<sockaddr_in>.size)
+
+            errno = 0
+            let received = withUnsafeMutablePointer(to: &srcAddr) { ptr in
+                ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sa in
+                    recvfrom(sock, &buffer, buffer.count, 0, sa, &srcLen)
+                }
+            }
+
+            if received > 0 {
+                return String(bytes: buffer[..<received], encoding: .utf8)
+            } else {
+                let recErr = errno
+                deskOrbitLog("[DeskOrbit WiZ] recvfrom returned \(received), errno=\(recErr)")
+            }
         }
         return nil
     }
@@ -801,34 +841,49 @@ public final class WizLightService: @unchecked Sendable {
     public func findIPForMAC(mac: String) -> String? {
         let cleanTarget = mac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
 
-        let pipe = Pipe()
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/sbin/arp")
-        process.arguments = ["-a", "-n"]
-        process.standardOutput = pipe
+        func queryARP() -> String? {
+            let pipe = Pipe()
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/sbin/arp")
+            process.arguments = ["-a", "-n"]
+            process.standardOutput = pipe
 
-        do {
-            try process.run()
-            process.waitUntilExit()
-            let data = pipe.fileHandleForReading.readDataToEndOfFile()
-            if let output = String(data: data, encoding: .utf8) {
-                for line in output.components(separatedBy: "\n") {
-                    let parts = line.components(separatedBy: " ")
-                    guard parts.count >= 4 else { continue }
-                    let ipWithParens = parts[1]
-                    let ip = ipWithParens.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
-                    let rawMac = parts[3]
-                    let cleanMac = rawMac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
+            do {
+                try process.run()
+                process.waitUntilExit()
+                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                if let output = String(data: data, encoding: .utf8) {
+                    for line in output.components(separatedBy: "\n") {
+                        let parts = line.components(separatedBy: " ")
+                        guard parts.count >= 4 else { continue }
+                        let ipWithParens = parts[1]
+                        let ip = ipWithParens.trimmingCharacters(in: CharacterSet(charactersIn: "()"))
+                        let rawMac = parts[3]
+                        let cleanMac = rawMac.replacingOccurrences(of: ":", with: "").replacingOccurrences(of: "-", with: "").lowercased()
 
-                    if cleanMac == cleanTarget {
-                        return ip
+                        if cleanMac == cleanTarget {
+                            return ip
+                        }
                     }
                 }
+            } catch {
+                return nil
             }
-        } catch {
             return nil
         }
-        return nil
+
+        if let ip = queryARP() { return ip }
+
+        // If not in ARP cache, wake up subnet with ping probes
+        for probeIP in ["192.168.1.2", "192.168.1.3", "192.168.1.4", "192.168.1.5", "192.168.1.6", "192.168.1.7", "192.168.1.8", "192.168.1.9", "192.168.1.10"] {
+            let p = Process()
+            p.executableURL = URL(fileURLWithPath: "/sbin/ping")
+            p.arguments = ["-c", "1", "-W", "150", probeIP]
+            try? p.run()
+            p.waitUntilExit()
+        }
+
+        return queryARP()
     }
 
     // Helper: Convert hex string to binary Data
