@@ -25,8 +25,7 @@ let package = Package(
                 .linkedFramework("Speech"),
                 .linkedFramework("AVFoundation"),
                 .linkedFramework("NaturalLanguage"),
-                .linkedFramework("AppIntents"),
-                .linkedFramework("FoundationModels")
+                .linkedFramework("AppIntents")
             ]
         )
     ]
