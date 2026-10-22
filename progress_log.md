@@ -59,6 +59,11 @@ This log documents the chronological development history, engineering decisions,
 - **Fix:** Added `DeviceManager.setLightPower(light: WizLightItem, isOn: Bool)` ensuring verbal *"turn on"* and *"turn off"* set explicit target boolean states instead of inverting state via `toggleLightPower`.
 - Applied identical explicit boolean state verification for `setAudioMute`.
 
+### Phase 8: Bundle Packaging & Finder AppIcon Fix
+- **Issue:** Finder displayed generic default application icon on macOS when opening distributed DMG.
+- **Root Cause:** `bundle_app.sh` relied on `AppIcon.icns` which was missing from the repository, and `NSWorkspace.shared.setIcon` only sets local resource fork metadata that does not survive disk image distribution.
+- **Fix:** Generated full multi-resolution `AppIcon.icns` (16x16 through 1024x1024) via `sips` and `iconutil`, committed directly to git, bundled into `DeskOrbit.app/Contents/Resources/AppIcon.icns` matching `CFBundleIconFile` in `Info.plist`, and added CI asset verification step.
+
 ---
 
 ## 2026-10-21: The WiZ v2 Local Control & Zero-Cloud Migration (v1.3.0 & v1.4.0)

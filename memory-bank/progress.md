@@ -36,6 +36,7 @@ DeskOrbit is fully implemented, verified on physical hardware, packaged as a uni
 - **UI State Synchronization Fix:** Fixed mode switching (`activeLightModes`) and direct `@Published` updates in `DeviceManager` so light cards instantly reflect voice-commanded colors and temperatures.
 - **Audio Device Targeting & Intent Isolation:** Added `extractAudioTarget` and `extractPercentageOrWordNumber` to resolve commands for specific hardware devices (MacBook Air Speakers, JBL, AirPods, HDMI/SA272). Partitioned Foundation Model prompt across audio, display, and light to eliminate cross-device bleed.
 - **Explicit Power & Mute State Enforcement:** Added `setLightPower` to ensure verbal commands apply absolute boolean states rather than inverting via `toggleLightPower`.
+- **App Bundle Finder Icon (`AppIcon.icns`):** Added multi-resolution `AppIcon.icns` packaging into `Contents/Resources/AppIcon.icns` to ensure Finder displays the application icon on distributed DMGs.
 
 ### [v1.4.0] — 2026-10-21
 - **macOS Golden Gate 27 Liquid Glass:** Added Liquid Glass material modifier with dynamic blur backdrops, specular sheens on scrubbers, accessibility fallbacks, and `.fullSizeContentView` window integration.

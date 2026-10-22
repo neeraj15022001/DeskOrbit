@@ -53,8 +53,11 @@ with open("/tmp/deskorbit_consts.txt", "w") as f:
     f.write(const_file)
 
 sdk = subprocess.check_output(["xcrun", "--show-sdk-path"]).decode().strip()
-toolchain = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
-out_dir = "/Users/neerajgupta/Desktop/DeskOrbit/DeskOrbit.app/Contents/Resources"
+xcode_dev = subprocess.check_output(["xcode-select", "-p"]).decode().strip()
+toolchain = os.path.join(xcode_dev, "Toolchains/XcodeDefault.xctoolchain")
+if not os.path.exists(toolchain):
+    toolchain = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain"
+out_dir = os.path.abspath("DeskOrbit.app/Contents/Resources")
 
 cmd = [
     "xcrun", "appintentsmetadataprocessor",
@@ -82,11 +85,36 @@ if [ -f "$DIR/Info.plist" ]; then
     fi
 fi
 
-if [ -f "$DIR/AppIcon.icns" ]; then
-    cp "$DIR/AppIcon.icns" "$RESOURCES/AppIcon.icns"
+# Ensure AppIcon.icns is present
+if [ ! -f "$DIR/AppIcon.icns" ] && [ -f "$DIR/AppIcon_1024.png" ]; then
+    echo "🎨 Generating AppIcon.icns from AppIcon_1024.png..."
+    ICONSET="/tmp/AppIcon.iconset"
+    rm -rf "$ICONSET"
+    mkdir -p "$ICONSET"
+    sips -z 16 16     "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_16x16.png" >/dev/null 2>&1
+    sips -z 32 32     "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_16x16@2x.png" >/dev/null 2>&1
+    sips -z 32 32     "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_32x32.png" >/dev/null 2>&1
+    sips -z 64 64     "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_32x32@2x.png" >/dev/null 2>&1
+    sips -z 128 128   "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_128x128.png" >/dev/null 2>&1
+    sips -z 256 256   "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_128x128@2x.png" >/dev/null 2>&1
+    sips -z 256 256   "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_256x256.png" >/dev/null 2>&1
+    sips -z 512 512   "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_256x256@2x.png" >/dev/null 2>&1
+    sips -z 512 512   "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_512x512.png" >/dev/null 2>&1
+    sips -z 1024 1024 "$DIR/AppIcon_1024.png" --out "$ICONSET/icon_512x512@2x.png" >/dev/null 2>&1
+    iconutil -c icns "$ICONSET" -o "$DIR/AppIcon.icns"
+    rm -rf "$ICONSET"
 fi
 
-# Apply icon to bundle
+if [ -f "$DIR/AppIcon.icns" ]; then
+    cp "$DIR/AppIcon.icns" "$RESOURCES/AppIcon.icns"
+    echo "🖼️ Bundled AppIcon.icns into Contents/Resources/"
+fi
+
+if [ ! -f "$RESOURCES/AppIcon.icns" ]; then
+    echo "⚠️ Warning: Contents/Resources/AppIcon.icns was not created!"
+fi
+
+# Apply icon to bundle metadata
 if [ -f "$DIR/AppIcon_1024.png" ]; then
     swift -e '
     import AppKit

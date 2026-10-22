@@ -33,6 +33,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Automatic recovery from `errno=64 (EHOSTDOWN)` and `errno=65 (EHOSTUNREACH)` over dual-band Wi-Fi (5GHz Mac to 2.4GHz WiZ bulb) via synchronous ICMP ping re-priming and immediate packet retry.
 
 ### Fixed
+- **App Bundle Finder Icon (`AppIcon.icns`):**
+  - Resolved missing Finder application icon in bundled DMG distributions by generating and committing high-resolution `AppIcon.icns` into `Contents/Resources/AppIcon.icns` matched to `CFBundleIconFile`.
+  - Added automated multi-resolution iconset fallback generation in `bundle_app.sh` and CI release validation check.
 - **Audio Device Targeting & Intent Isolation:**
   - Resolved an issue where commands like *"adjust volume"* without digits failed regex percentage parsing and fell through to the Foundation Model, which previously mapped all unclassified requests to smart lighting presets.
   - Added specific output device resolution (`extractAudioTarget`) supporting targeted commands (e.g., *"set MacBook speaker volume to 50%"*, *"set JBL volume to 80%"*, *"mute HDMI display"*) matching against active `AudioItem` peripherals.

@@ -53,6 +53,10 @@ DeskOrbit has reached version **v1.5.0**, introducing an on-device Voice Assista
 - **Fix:** Added `DeviceManager.setLightPower(light: WizLightItem, isOn: Bool)` to ensure spoken *"turn on"* and *"turn off"* enforce absolute boolean targets rather than blind toggle inversion via `toggleLightPower`.
 - Applied identical explicit state verification for `setAudioMute(isMuted: Bool, deviceName: String?)`.
 
+### 8. App Bundle Finder Icon Resolution in DMG Distribution
+- **Discovery:** Finder on downloaded DMGs showed a generic default application icon because `AppIcon.icns` was not tracked in git and `NSWorkspace.shared.setIcon` only applies local resource fork metadata.
+- **Solution:** Generated multi-resolution `AppIcon.icns` using `sips` and `iconutil`, committed to repository, updated `bundle_app.sh` to copy into `DeskOrbit.app/Contents/Resources/AppIcon.icns` matching `CFBundleIconFile` in `Info.plist`, and added CI release test step.
+
 ---
 
 ## Active Focus & Next Steps
